@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#1e3a5f">
+<title>JCBL Agri e-Catalog</title>
+<link rel="manifest" href="data:application/json,{}">
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600;700&display=swap');
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#f4f3ef;--surface:#fff;--surface2:#edeae4;--border:#d5cfc7;--border2:#bdb6ac;
+  --text:#1c1917;--text2:#57534e;--text3:#a8a29e;
+  --accent:#1e3a5f;--accent2:#2563a8;--accent-light:#eaf0fb;
+  --green:#166534;--green-bg:#dcfce7;--amber:#92400e;--amber-bg:#fef3c7;
+  --red:#991b1b;--red-bg:#fee2e2;
+  --gold:#c9a84c;--gold-light:#fef3c7;
+  --shadow-sm:0 2px 8px rgba(28,25,23,.08);
+  --shadow-md:0 6px 20px rgba(28,25,23,.12);
+  --shadow-lg:0 16px 40px rgba(28,25,23,.16);
+  --r:14px;--r-sm:8px;--r-full:9999px;
+  --font:'IBM Plex Sans',system-ui,sans-serif;
+  --mono:'IBM Plex Mono','Consolas',monospace;
+  --safe-top:env(safe-area-inset-top);
+  --safe-bottom:env(safe-area-inset-bottom);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg)}
+body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-webkit-font-smoothing:antialiased}
+::-webkit-scrollbar{display:none}
+
+/* ── SETUP / AUTH SCREENS ── */
+.full-screen{position:fixed;inset:0;z-index:1000;display:flex;align-items:center;justify-content:center;padding:20px;background:linear-gradient(135deg,#1a3558 0%,#0f2340 100%)}
+.auth-card{background:#fff;border-radius:20px;padding:36px 32px;width:100%;max-width:380px;box-shadow:var(--shadow-lg);text-align:center}
+.auth-logo{font-size:44px;margin-bottom:12px}
+.auth-title{font-size:20px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.auth-sub{font-size:12.5px;color:var(--text3);margin-bottom:28px;line-height:1.6}
+.auth-field{margin-bottom:14px;text-align:left}
+.auth-field label{display:block;font-size:10.5px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.05em}
+.auth-field input,.auth-field textarea{width:100%;padding:12px 14px;border:1.5px solid var(--border);border-radius:var(--r-sm);font-family:var(--font);font-size:14px;color:var(--text);outline:none;background:#fafaf8;transition:border .15s;-webkit-appearance:none}
+.auth-field input:focus,.auth-field textarea:focus{border-color:var(--accent2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,168,.1)}
+.auth-field textarea{resize:none;height:110px;font-size:12px;font-family:var(--mono)}
+.auth-btn{width:100%;height:48px;background:var(--accent);color:#fff;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .18s;margin-top:4px;letter-spacing:.02em}
+.auth-btn:active{transform:scale(.97);background:var(--accent2)}
+.auth-err{margin-top:12px;padding:10px 14px;background:var(--red-bg);border-radius:var(--r-sm);font-size:12px;color:var(--red);display:none;text-align:left;font-weight:500;line-height:1.5}
+.auth-setup{margin-top:16px;padding:12px 14px;background:var(--accent-light);border-radius:var(--r-sm);font-size:11.5px;color:var(--accent2);text-align:left;line-height:1.7}
+.setup-step{display:flex;gap:10px;margin-bottom:9px;font-size:12px;color:var(--text2);line-height:1.6;text-align:left}
+.setup-num{width:22px;height:22px;background:var(--accent);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px}
+
+/* ── MAIN APP SHELL ── */
+.app-shell{position:fixed;inset:0;display:flex;flex-direction:column;background:var(--bg)}
+.app-header{background:linear-gradient(135deg,#1a3558,#1e3a5f);padding:calc(var(--safe-top) + 12px) 16px 12px;display:flex;align-items:center;gap:12px;box-shadow:0 2px 12px rgba(0,0,0,.25);flex-shrink:0;z-index:100}
+.app-logo-img{width:34px;height:34px;border-radius:8px;object-fit:contain;background:#fff;padding:3px;flex-shrink:0}
+.app-logo-placeholder{width:34px;height:34px;background:rgba(255,255,255,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.app-header-text{flex:1;min-width:0}
+.app-header-title{font-size:14px;font-weight:700;color:#fff;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.app-header-sub{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.03em;margin-top:1px}
+.hdr-btn{width:36px;height:36px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;transition:background .15s;color:#fff}
+.hdr-btn:active{background:rgba(255,255,255,.22)}
+.viewer-badge{padding:3px 10px;background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.4);border-radius:20px;font-size:9.5px;font-weight:700;color:#ffd700;white-space:nowrap}
+.conn-dot-wrap{display:flex;align-items:center;gap:4px}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:#ef4444;flex-shrink:0;transition:background .3s}
+.conn-dot.online{background:#22c55e}
+
+/* ── SEARCH BAR ── */
+.search-bar{padding:12px 14px;background:var(--surface);border-bottom:1px solid var(--border);flex-shrink:0;display:flex;gap:8px;align-items:center}
+.search-input-wrap{flex:1;position:relative}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:15px;color:var(--text3);pointer-events:none}
+.search-input{width:100%;height:40px;background:var(--bg);border:1.5px solid var(--border);border-radius:var(--r-full);padding:0 36px 0 36px;font-family:var(--font);font-size:14px;color:var(--text);outline:none;-webkit-appearance:none;transition:border .15s}
+.search-input:focus{border-color:var(--accent2);background:#fff;box-shadow:0 0 0 3px rgba(37,99,168,.1)}
+.search-clear{position:absolute;right:11px;top:50%;transform:translateY(-50%);background:none;border:none;font-size:16px;color:var(--text3);cursor:pointer;display:none;padding:2px}
+.filter-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0;transition:all .15s}
+.filter-btn:active{transform:scale(.92);background:var(--accent2)}
+.filter-btn.has-filter{background:var(--gold)}
+
+/* ── FILTER PILLS ROW ── */
+.filter-pills-row{padding:8px 14px;display:flex;gap:7px;overflow-x:auto;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
+.filter-pills-row:empty{display:none}
+.fpill{display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:var(--accent);color:#fff;border-radius:var(--r-full);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;transition:all .15s}
+.fpill:active{opacity:.8}
+.fpill-x{font-size:13px;opacity:.7}
+.active-count{padding:4px 10px;background:var(--surface2);border-radius:var(--r-full);font-size:11px;font-weight:600;color:var(--text3);white-space:nowrap;display:flex;align-items:center}
+
+/* ── CONTENT AREA ── */
+.content-area{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 12px calc(var(--safe-bottom) + 80px)}
+.empty-state{text-align:center;padding:60px 24px;color:var(--text3)}
+.empty-icon{font-size:56px;margin-bottom:16px}
+.empty-title{font-size:18px;font-weight:600;color:var(--text2);margin-bottom:8px}
+.empty-sub{font-size:13px;line-height:1.6}
+
+/* ── PRODUCT CARDS ── */
+.product-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.product-grid.list-view{grid-template-columns:1fr}
+.product-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .2s;cursor:pointer;position:relative}
+.product-card:active{transform:scale(.97);box-shadow:var(--shadow-sm)}
+.product-card.selected{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
+.card-img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text3)}
+.card-img img{width:100%;height:100%;object-fit:cover}
+.card-body{padding:10px 11px}
+.card-code{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:3px}
+.card-name{font-size:12.5px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-cat{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
+.card-price{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--green)}
+.card-weight{font-size:10.5px;color:var(--text3);font-family:var(--mono)}
+.card-select{position:absolute;top:8px;right:8px;width:24px;height:24px;background:#fff;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;box-shadow:var(--shadow-sm)}
+.product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff}
+/* List view card */
+.product-grid.list-view .product-card{display:flex;gap:0}
+.product-grid.list-view .card-img{width:80px;height:80px;aspect-ratio:unset;flex-shrink:0;border-radius:0}
+.product-grid.list-view .card-body{display:flex;flex-direction:column;justify-content:center}
+
+/* ── BOTTOM BAR ── */
+.bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 14px calc(var(--safe-bottom) + 8px);display:flex;gap:8px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:100}
+.bottom-tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;border:none;background:none;cursor:pointer;border-radius:var(--r-sm);transition:all .15s;color:var(--text3);font-family:var(--font)}
+.bottom-tab.active{color:var(--accent2);background:var(--accent-light)}
+.bottom-tab-icon{font-size:20px;line-height:1}
+.bottom-tab-label{font-size:10px;font-weight:600;letter-spacing:.03em}
+
+/* ── SELECTION ACTION BAR ── */
+.selection-bar{position:fixed;bottom:calc(var(--safe-bottom) + 64px);left:12px;right:12px;background:var(--accent);border-radius:var(--r);padding:12px 16px;display:flex;align-items:center;gap:10px;box-shadow:var(--shadow-lg);z-index:99;transition:all .25s cubic-bezier(.34,1.56,.64,1)}
+.selection-bar.hidden{transform:translateY(200px);opacity:0;pointer-events:none}
+.sel-count{font-size:13px;font-weight:700;color:#fff;flex:1}
+.sel-actions{display:flex;gap:7px}
+.sel-btn{height:32px;padding:0 13px;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:var(--r-full);color:#fff;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:all .15s}
+.sel-btn:active{background:rgba(255,255,255,.3);transform:scale(.95)}
+.sel-btn.primary{background:#fff;color:var(--accent)}
+
+/* ── FILTER SHEET ── */
+.sheet-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;opacity:0;pointer-events:none;transition:opacity .25s;backdrop-filter:blur(3px)}
+.sheet-backdrop.open{opacity:1;pointer-events:all}
+.filter-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;z-index:201;padding:0 0 calc(var(--safe-bottom) + 16px);max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.filter-sheet.open{transform:translateY(0)}
+.sheet-handle{width:40px;height:4px;background:var(--border2);border-radius:99px;margin:12px auto 0}
+.sheet-title{font-size:16px;font-weight:700;color:var(--text);padding:16px 20px 12px;border-bottom:1px solid var(--border)}
+.filter-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+.filter-section:last-child{border-bottom:none}
+.filter-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--text3);margin-bottom:12px}
+.filter-chips{display:flex;flex-wrap:wrap;gap:7px}
+.fchip{padding:7px 14px;border:1.5px solid var(--border);border-radius:var(--r-full);font-size:13px;font-weight:500;color:var(--text2);cursor:pointer;transition:all .15s;background:#fff}
+.fchip.active{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.fchip:active{transform:scale(.94)}
+.filter-range{display:flex;align-items:center;gap:10px}
+.filter-range input{flex:1;height:40px;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:0 12px;font-size:14px;font-family:var(--mono);color:var(--text);outline:none;background:var(--bg);-webkit-appearance:none;text-align:center}
+.filter-range input:focus{border-color:var(--accent2);background:#fff}
+.filter-range-sep{color:var(--text3);font-size:13px;font-weight:600;white-space:nowrap}
+.sheet-actions{display:flex;gap:10px;padding:16px 20px 0}
+.sheet-btn{flex:1;height:48px;border-radius:var(--r-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.sheet-btn.clear{background:var(--surface2);color:var(--text2)}
+.sheet-btn.apply{background:var(--accent);color:#fff}
+.sheet-btn:active{transform:scale(.96)}
+.specs-input-wrap{display:flex;flex-direction:column;gap:8px}
+.spec-input-row{display:flex;gap:8px;align-items:center}
+.spec-input-row label{font-size:12px;font-weight:600;color:var(--text2);min-width:90px}
+.spec-input-row input{flex:1;height:36px;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:0 10px;font-size:13px;font-family:var(--mono);color:var(--text);outline:none;background:var(--bg);-webkit-appearance:none}
+.spec-input-row input:focus{border-color:var(--accent2);background:#fff}
+
+/* ── PRODUCT DETAIL SHEET ── */
+.detail-sheet{position:fixed;inset:0;background:#fff;z-index:300;transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;-webkit-overflow-scrolling:touch}
+.detail-sheet.open{transform:translateX(0)}
+.detail-header{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border-bottom:1px solid var(--border);padding:calc(var(--safe-top) + 10px) 16px 12px;display:flex;align-items:center;gap:12px;z-index:10}
+.back-btn{width:36px;height:36px;background:var(--surface2);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;color:var(--text);transition:all .15s;flex-shrink:0}
+.back-btn:active{background:var(--border);transform:scale(.92)}
+.detail-title{font-size:15px;font-weight:700;color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.detail-share-btn{width:36px;height:36px;background:var(--accent);border:none;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;color:#fff;flex-shrink:0}
+/* Photo gallery */
+.photo-gallery{position:relative;background:#000}
+.gallery-main{width:100%;aspect-ratio:4/3;object-fit:contain;display:flex;align-items:center;justify-content:center;background:var(--surface2);font-size:60px;color:var(--text3)}
+.gallery-main img{width:100%;height:100%;object-fit:contain}
+.gallery-tabs{display:flex;gap:6px;padding:10px 14px;overflow-x:auto;background:var(--surface2)}
+.gallery-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;border:2px solid transparent;cursor:pointer;flex-shrink:0;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:22px;transition:all .15s;overflow:hidden}
+.gallery-thumb img{width:100%;height:100%;object-fit:cover}
+.gallery-thumb.active{border-color:var(--accent2)}
+/* Detail info */
+.detail-body{padding:18px 16px}
+.detail-section{margin-bottom:20px}
+.detail-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--text3);margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.spec-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.spec-item{background:var(--bg);border-radius:var(--r-sm);padding:10px 12px}
+.spec-label{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text3);margin-bottom:3px}
+.spec-val{font-size:13.5px;font-weight:600;color:var(--text);font-family:var(--mono)}
+.spec-item.full{grid-column:1/-1}
+.price-card{background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:var(--r);padding:18px;color:#fff;text-align:center;margin-bottom:14px}
+.price-card-label{font-size:10.5px;font-weight:600;letter-spacing:.06em;opacity:.7;text-transform:uppercase;margin-bottom:6px}
+.price-card-val{font-size:32px;font-weight:800;font-family:var(--mono);margin-bottom:4px}
+.price-card-sub{font-size:12px;opacity:.7}
+.action-btns{display:flex;gap:10px;margin-top:16px}
+.action-btn{flex:1;height:48px;border-radius:var(--r-sm);border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);display:flex;align-items:center;justify-content:center;gap:8px;transition:all .15s}
+.action-btn:active{transform:scale(.96)}
+.action-btn.primary{background:var(--accent);color:#fff}
+.action-btn.secondary{background:var(--surface2);color:var(--text)}
+.action-btn.whatsapp{background:#16a34a;color:#fff}
+
+/* ── PRICE CALCULATOR SHEET ── */
+.price-calc-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;z-index:302;padding:0 0 calc(var(--safe-bottom)+16px);max-height:92vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.price-calc-sheet.open{transform:translateY(0)}
+.calc-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+.calc-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.calc-label{font-size:13.5px;font-weight:600;color:var(--text2)}
+.calc-input{width:120px;height:38px;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:0 12px;font-size:14px;font-family:var(--mono);color:var(--text);outline:none;text-align:right;background:var(--bg);-webkit-appearance:none;transition:border .15s}
+.calc-input:focus{border-color:var(--accent2);background:#fff}
+.price-result{background:linear-gradient(135deg,#0f2340,#1e3a5f);border-radius:var(--r);margin:16px 20px;padding:20px;text-align:center}
+.price-result-lbl{font-size:11px;font-weight:600;color:rgba(255,255,255,.5);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.price-result-val{font-size:36px;font-weight:800;font-family:var(--mono);color:#fff;margin-bottom:4px}
+.price-result-sub{font-size:12px;color:rgba(255,255,255,.5)}
+.price-mode-tabs{display:flex;gap:6px;padding:16px 20px 0}
+.price-mode-tab{flex:1;height:40px;border-radius:var(--r-sm);border:1.5px solid var(--border);background:#fff;font-size:12.5px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2);transition:all .15s}
+.price-mode-tab.active{background:var(--accent);border-color:var(--accent);color:#fff}
+
+/* ── PDF STYLE SHEET ── */
+.pdf-style-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:22px 22px 0 0;z-index:302;padding:20px;max-height:80vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+.pdf-style-sheet.open{transform:translateY(0)}
+.style-option{display:flex;align-items:center;gap:14px;padding:14px;border:1.5px solid var(--border);border-radius:var(--r);margin-bottom:10px;cursor:pointer;transition:all .15s}
+.style-option.active{border-color:var(--accent2);background:var(--accent-light)}
+.style-option:active{transform:scale(.98)}
+.style-icon{width:48px;height:48px;background:var(--surface2);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.style-info{flex:1}
+.style-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:2px}
+.style-desc{font-size:12px;color:var(--text3);line-height:1.5}
+
+/* ── CATEGORY COLORS ── */
+.cat-CASTING{background:#dbeafe;color:#1e40af}.cat-FORGING{background:#ffedd5;color:#9a3412}
+.cat-BALLS{background:#dcfce7;color:#166534}.cat-PIPE{background:#f3e8ff;color:#7e22ce}
+.cat-EYE-BOLT,.cat-EYE-END{background:#ccfbf1;color:#0f766e}.cat-BOLT{background:#fef3c7;color:#92400e}
+.cat-LINKAGE,.cat-WELD-ON-END{background:#d1fae5;color:#065f46}.cat-DISC{background:#fce7f3;color:#9d174d}
+.cat-WHEEL{background:#e0e7ff;color:#3730a3}.cat-PIN{background:#fef9c3;color:#713f12}
+.cat-OTHER{background:#f3f4f6;color:#374151}
+
+/* ── NOTIFICATION ── */
+.notif{position:fixed;top:calc(var(--safe-top)+70px);left:50%;transform:translateX(-50%) translateY(-80px);background:var(--accent);color:#fff;padding:11px 20px;border-radius:var(--r-full);font-size:13px;font-weight:600;z-index:500;transition:transform .3s cubic-bezier(.34,1.56,.64,1);box-shadow:var(--shadow-lg);white-space:nowrap;max-width:90vw;text-align:center}
+.notif.show{transform:translateX(-50%) translateY(0)}
+.notif.success{background:var(--green)}.notif.error{background:var(--red)}
+
+/* ── MISC ── */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;background:var(--accent-light);color:var(--accent2)}
+.loading{display:flex;align-items:center;justify-content:center;padding:60px;flex-direction:column;gap:14px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.client-mode-banner{background:linear-gradient(135deg,#92400e,#c2410c);padding:8px 16px;text-align:center;font-size:12px;font-weight:700;color:#fff;letter-spacing:.04em;flex-shrink:0}
+</style>
+</head>
+<body>
+
+<div id="notif" class="notif"></div>
+
+<!-- SETUP SCREEN -->
+<div class="full-screen" id="setup-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">🔥</div>
+    <div class="auth-title">Connect to Firebase</div>
+    <div class="auth-sub">Paste your Firebase config to sync with FOB Manager Pro</div>
+    <div class="setup-step"><div class="setup-num">1</div><div>Go to <strong>console.firebase.google.com</strong> → Your project → ⚙️ Settings → General → Your apps → Web → Copy firebaseConfig</div></div>
+    <div class="setup-step"><div class="setup-num">2</div><div>Paste the full code block below (same config as FOB Manager)</div></div>
+    <div class="auth-field">
+      <label>Firebase Config</label>
+      <textarea id="setup-config" placeholder='{&#10;  "apiKey": "AIza...",&#10;  "databaseURL": "https://your-project-default-rtdb.firebaseio.com",&#10;  ...&#10;}'></textarea>
+    </div>
+    <div id="setup-err" class="auth-err"></div>
+    <button class="auth-btn" onclick="saveConfig()">🔥 Connect &amp; Continue</button>
+  </div>
+</div>
+
+<!-- AUTH SCREEN -->
+<div class="full-screen" id="auth-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">🌾</div>
+    <div class="auth-title" id="auth-app-name">JCBL Agri e-Catalog</div>
+    <div class="auth-sub" id="auth-app-sub">Sign in to access the product catalogue</div>
+    <div class="auth-field">
+      <label>Email</label>
+      <input type="email" id="auth-email" placeholder="you@company.com" autocomplete="email" onkeydown="if(event.key==='Enter')document.getElementById('auth-pw').focus()">
+    </div>
+    <div class="auth-field">
+      <label>Password</label>
+      <input type="password" id="auth-pw" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doSignIn()">
+    </div>
+    <div id="auth-err" class="auth-err"></div>
+    <button class="auth-btn" onclick="doSignIn()">Sign In →</button>
+    <div class="auth-setup" style="margin-top:16px">
+      <strong>View-only access?</strong> Ask admin to enable Viewer Mode in FOB Manager → Settings → System, then use the viewer password below.<br><br>
+      <button onclick="enterViewerDirect()" style="width:100%;height:40px;background:var(--amber-bg);border:1.5px solid #fcd34d;border-radius:8px;font-size:13px;font-weight:700;color:var(--amber);cursor:pointer;font-family:var(--font)">👁 Enter as Viewer</button>
+    </div>
+  </div>
+</div>
+
+<!-- VIEWER PASSWORD MODAL -->
+<div class="full-screen" id="viewer-pw-screen" style="display:none">
+  <div class="auth-card">
+    <div class="auth-logo">👁</div>
+    <div class="auth-title">Viewer Access</div>
+    <div class="auth-sub">Enter viewer password to browse the catalogue in read-only mode</div>
+    <div class="auth-field">
+      <label>Viewer Password</label>
+      <input type="password" id="viewer-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')checkViewerPw()">
+    </div>
+    <div id="viewer-pw-err" class="auth-err"></div>
+    <button class="auth-btn" onclick="checkViewerPw()">👁 View Catalogue</button>
+    <button onclick="document.getElementById('viewer-pw-screen').style.display='none';document.getElementById('auth-screen').style.display='flex'" style="width:100%;height:40px;background:none;border:none;color:var(--text3);font-size:13px;cursor:pointer;margin-top:8px;font-family:var(--font)">← Back to Sign In</button>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-shell" id="app-shell" style="display:none">
+
+  <!-- CLIENT MODE BANNER -->
+  <div id="client-banner" class="client-mode-banner" style="display:none">👁 VIEW ONLY MODE — Prices &amp; sensitive data hidden as configured</div>
+
+  <!-- HEADER -->
+  <div class="app-header">
+    <div id="hdr-logo" class="app-logo-placeholder">🌾</div>
+    <div class="app-header-text">
+      <div class="app-header-title" id="hdr-name">JCBL Agri e-Catalog</div>
+      <div class="app-header-sub" id="hdr-sub">Agricultural &amp; Industrial Parts</div>
+    </div>
+    <div class="conn-dot-wrap" title="Connection status">
+      <div class="conn-dot" id="conn-dot"></div>
+    </div>
+    <div class="hdr-btn" onclick="toggleView()" id="view-toggle-btn" title="Toggle view">⊞</div>
+    <div class="hdr-btn" onclick="openPdfStyleSheet()" title="Generate PDF">📄</div>
+  </div>
+
+  <!-- SEARCH BAR -->
+  <div class="search-bar">
+    <div class="search-input-wrap">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="search" type="search" placeholder="Search items, codes, materials…" oninput="applyFilters()" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+      <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
+    </div>
+    <button class="filter-btn" id="filter-btn" onclick="openFilterSheet()">⚙</button>
+  </div>
+
+  <!-- ACTIVE FILTER PILLS -->
+  <div class="filter-pills-row" id="active-pills"></div>
+
+  <!-- CONTENT -->
+  <div class="content-area" id="content-area">
+    <div class="loading" id="loading-state">
+      <div class="spinner"></div>
+      <div style="font-size:13px;color:var(--text3);font-weight:600">Loading catalogue…</div>
+    </div>
+    <div id="product-grid" class="product-grid" style="display:none"></div>
+    <div class="empty-state" id="empty-state" style="display:none">
+      <div class="empty-icon">🔍</div>
+      <div class="empty-title">No products found</div>
+      <div class="empty-sub">Try adjusting your search or filters</div>
+    </div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-bar">
+    <button class="bottom-tab active" onclick="setTab('catalogue')" id="tab-catalogue">
+      <span class="bottom-tab-icon">📦</span>
+      <span class="bottom-tab-label">Catalogue</span>
+    </button>
+    <button class="bottom-tab" onclick="setTab('selected')" id="tab-selected">
+      <span class="bottom-tab-icon">✅</span>
+      <span class="bottom-tab-label" id="tab-sel-count">Selected</span>
+    </button>
+    <button class="bottom-tab" onclick="setTab('pricelist')" id="tab-pricelist">
+      <span class="bottom-tab-icon">💰</span>
+      <span class="bottom-tab-label">Price List</span>
+    </button>
+    <button class="bottom-tab" onclick="doSignOut()" id="tab-signout">
+      <span class="bottom-tab-icon">👤</span>
+      <span class="bottom-tab-label">Sign Out</span>
+    </button>
+  </div>
+
+  <!-- SELECTION BAR -->
+  <div class="selection-bar hidden" id="sel-bar">
+    <div class="sel-count" id="sel-count-text">0 selected</div>
+    <div class="sel-actions">
+      <button class="sel-btn" onclick="clearSelection()">✕ Clear</button>
+      <button class="sel-btn" onclick="openPriceCalc()">💰 Price</button>
+      <button class="sel-btn primary" onclick="generateAndShare()">📄 PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- FILTER SHEET -->
+<div class="sheet-backdrop" id="filter-backdrop" onclick="closeFilterSheet()"></div>
+<div class="filter-sheet" id="filter-sheet">
+  <div class="sheet-handle"></div>
+  <div class="sheet-title">🔍 Filter Products</div>
+  <div id="filter-body"></div>
+  <div class="sheet-actions">
+    <button class="sheet-btn clear" onclick="clearAllFilters()">Clear All</button>
+    <button class="sheet-btn apply" onclick="applyFilterSheet()">Apply Filters</button>
+  </div>
+</div>
+
+<!-- PRODUCT DETAIL -->
+<div class="detail-sheet" id="detail-sheet">
+  <div class="detail-header">
+    <button class="back-btn" onclick="closeDetail()">←</button>
+    <div class="detail-title" id="detail-title">Product</div>
+    <button class="detail-share-btn" onclick="shareCurrentProduct()">↑</button>
+  </div>
+  <div id="detail-content"></div>
+</div>
+
+<!-- PRICE CALCULATOR SHEET BACKDROP -->
+<div class="sheet-backdrop" id="calc-backdrop" onclick="closePriceCalc()"></div>
+<!-- PRICE CALCULATOR SHEET -->
+<div class="price-calc-sheet" id="price-calc-sheet">
+  <div class="sheet-handle" style="margin-bottom:4px"></div>
+  <div style="padding:12px 20px 0;font-size:16px;font-weight:700;color:var(--text)">💰 Price Calculator</div>
+  <div class="price-mode-tabs">
+    <button class="price-mode-tab active" onclick="setPriceMode('fob',this)">FOB</button>
+    <button class="price-mode-tab" onclick="setPriceMode('cif',this)">CIF</button>
+    <button class="price-mode-tab" onclick="setPriceMode('cfr',this)">CFR</button>
+    <button class="price-mode-tab" onclick="setPriceMode('exw',this)">EXW</button>
+  </div>
+  <div class="calc-section" id="calc-body"></div>
+  <div class="price-result" id="price-result"></div>
+  <div style="padding:0 20px 8px;display:flex;gap:10px">
+    <button class="sheet-btn apply" style="flex:1;height:48px;border-radius:10px;border:none;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);background:var(--green);color:#fff" onclick="applyPriceAndGenerate()">✓ Apply &amp; Generate PDF</button>
+  </div>
+</div>
+
+<!-- PDF STYLE SHEET BACKDROP -->
+<div class="sheet-backdrop" id="pdf-style-backdrop" onclick="closePdfStyleSheet()"></div>
+<!-- PDF STYLE SHEET -->
+<div class="pdf-style-sheet" id="pdf-style-sheet">
+  <div class="sheet-handle" style="margin-bottom:12px"></div>
+  <div style="font-size:16px;font-weight:700;color:var(--text);margin-bottom:16px">📄 Choose Catalogue Style</div>
+  <div class="style-option active" id="style-brochure" onclick="selectPdfStyle('brochure',this)">
+    <div class="style-icon">🖼</div>
+    <div class="style-info">
+      <div class="style-name">Full Brochure</div>
+      <div class="style-desc">Photos, tech specs, description, price — one product per page</div>
+    </div>
+    <div>✓</div>
+  </div>
+  <div class="style-option" id="style-photo-price" onclick="selectPdfStyle('photo-price',this)">
+    <div class="style-icon">📸</div>
+    <div class="style-info">
+      <div class="style-name">Photo + Price</div>
+      <div class="style-desc">Grid layout — product photo with price only. 3 per page</div>
+    </div>
+    <div></div>
+  </div>
+  <div class="style-option" id="style-photo-only" onclick="selectPdfStyle('photo-only',this)">
+    <div class="style-icon">🖼</div>
+    <div class="style-info">
+      <div class="style-name">Photo Only</div>
+      <div class="style-desc">Clean visual catalogue — photos with item codes. No pricing</div>
+    </div>
+    <div></div>
+  </div>
+  <div class="style-option" id="style-price-list" onclick="selectPdfStyle('price-list',this)">
+    <div class="style-icon">📋</div>
+    <div class="style-info">
+      <div class="style-name">Price List</div>
+      <div class="style-desc">Compact table — code, description, specs, price. Great for email</div>
+    </div>
+    <div></div>
+  </div>
+  <div style="margin-top:16px">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <input type="checkbox" id="pdf-show-price" checked style="width:18px;height:18px;accent-color:var(--accent)">
+      <label for="pdf-show-price" style="font-size:14px;font-weight:600;color:var(--text)">Include prices in PDF</label>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="pdf-custom-margin" style="width:18px;height:18px;accent-color:var(--accent)">
+      <label for="pdf-custom-margin" style="font-size:14px;font-weight:600;color:var(--text)">Add extra margin to prices</label>
+    </div>
+    <div id="pdf-margin-input" style="display:none;margin-top:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:13px;font-weight:600;color:var(--text2);min-width:80px">Margin %</span>
+        <input type="number" id="pdf-margin-pct" value="0" min="0" max="100" style="width:80px;height:36px;border:1.5px solid var(--border);border-radius:8px;padding:0 10px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:var(--bg);-webkit-appearance:none">
+        <span style="font-size:13px;font-weight:600;color:var(--text2);min-width:80px">Sea Freight €/kg</span>
+        <input type="number" id="pdf-freight" value="0" min="0" step="0.01" style="width:80px;height:36px;border:1.5px solid var(--border);border-radius:8px;padding:0 10px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:var(--bg);-webkit-appearance:none">
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:20px">
+    <button onclick="closePdfStyleSheet()" style="flex:1;height:48px;background:var(--surface2);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2)">Cancel</button>
+    <button onclick="generatePDF()" style="flex:2;height:48px;background:var(--accent);border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);color:#fff">📄 Generate PDF</button>
+  </div>
+</div>
+
+<script>
+// ── STATE ────────────────────────────────────────────────────────────────────
+const CATEGORIES = ['CASTING','FORGING','BALLS','PIPE','EYE BOLT','EYE END','BOLT','LINKAGE','DISC','WHEEL','PIN','WELD ON END','OTHER'];
+const CURRENCIES = ['EUR','USD','GBP','PLN','SEK','DKK','NOK','CHF','AUD','CAD'];
+const CUR_SYM = {EUR:'€',USD:'$',GBP:'£',PLN:'zł',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',AUD:'A$',CAD:'C$'};
+
+let state = {
+  items: [], settings: {}, isViewer: false,
+  searchQ: '', filters: {},
+  selected: new Set(),
+  gridView: true, // true=grid, false=list
+  currentItem: null,
+  pdfStyle: 'brochure',
+  priceMode: 'fob',
+  calcMargin: 0, calcFreight: 0,
+  tab: 'catalogue',
+  loaded: false,
+  authReady: false,
+};
+
+let _db = null, _auth = null;
+
+// ── UTILS ────────────────────────────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const curSym = c => CUR_SYM[c] || '€';
+const calcFOB = (pp,marg,fob,exr) => exr ? pp*(1+(marg+fob)/100)/exr : 0;
+const catCls = cat => 'cat-'+(cat||'OTHER').replace(/\s+/g,'-').toUpperCase();
+const today = () => new Date().toISOString().split('T')[0];
+
+function notify(msg, type){
+  const el = $('notif');
+  el.textContent = msg;
+  el.className = 'notif show ' + (type||'');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.className='notif', 3000);
+}
+
+// ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
+function getConfig(){
+  try{ return JSON.parse(localStorage.getItem('fob_fb_config')||'null'); }catch(e){return null;}
+}
+
+function saveConfig(){
+  const raw = ($('setup-config').value||'').trim();
+  const errEl = $('setup-err');
+  errEl.style.display = 'none';
+  try{
+    let cfg = null;
+    try{
+      const cleaned = raw.replace(/import\s.*?;\s*\n?/g,'').replace(/\/\/.*/g,'').replace(/const\s+app\s*=.*?;\s*\n?/g,'');
+      const s = cleaned.substring(cleaned.indexOf('{'), cleaned.lastIndexOf('}')+1);
+      cfg = new Function('return ('+s+')')();
+    }catch(e){ cfg = null; }
+    if(!cfg||!cfg.apiKey) throw new Error('apiKey not found');
+    if(!cfg.databaseURL) throw new Error('databaseURL missing — create Realtime Database in Firebase Console first');
+    localStorage.setItem('fob_fb_config', JSON.stringify(cfg));
+    $('setup-screen').style.display = 'none';
+    initFirebase(cfg);
+  }catch(e){
+    errEl.textContent = '❌ ' + e.message;
+    errEl.style.display = 'block';
+  }
+}
+
+function initFirebase(cfg){
+  try{
+    if(!firebase.apps.length) firebase.initializeApp(cfg);
+    _db   = firebase.database();
+    _auth = firebase.auth();
+    _db.ref('.info/connected').on('value', s => {
+      const dot = $('conn-dot');
+      if(dot) dot.className = 'conn-dot' + (s.val() ? ' online' : '');
+    });
+    _auth.onAuthStateChanged(user => {
+      if(user){ showApp(); startSync(); }
+      else if(!state.isViewer){ showAuth(); }
+    });
+  }catch(e){ notify('Firebase error: '+e.message,'error'); }
+}
+
+// ── AUTH ─────────────────────────────────────────────────────────────────────
+function showAuth(){
+  $('auth-screen').style.display = 'flex';
+  $('app-shell').style.display = 'none';
+  setTimeout(() => $('auth-email')?.focus(), 300);
+}
+
+function doSignIn(){
+  const email = $('auth-email').value;
+  const pw    = $('auth-pw').value;
+  const err   = $('auth-err');
+  err.style.display = 'none';
+  _auth.signInWithEmailAndPassword(email, pw).catch(e => {
+    err.textContent = e.code==='auth/wrong-password' ? 'Incorrect password.' :
+      e.code==='auth/user-not-found' ? 'Email not registered. Contact admin.' : e.message;
+    err.style.display = 'block';
+  });
+}
+
+function doSignOut(){
+  if(state.isViewer){
+    state.isViewer = false;
+    localStorage.removeItem('catalog_viewer');
+    location.reload();
+    return;
+  }
+  if(!confirm('Sign out?')) return;
+  _auth.signOut().then(() => location.reload());
+}
+
+function enterViewerDirect(){
+  $('auth-screen').style.display = 'none';
+  $('viewer-pw-screen').style.display = 'flex';
+  setTimeout(() => $('viewer-pw')?.focus(), 200);
+}
+
+function checkViewerPw(){
+  const entered = $('viewer-pw').value;
+  const correct = state.settings?.system?.viewerPassword || '';
+  const errEl = $('viewer-pw-err');
+  if(!correct || entered === correct){
+    state.isViewer = true;
+    localStorage.setItem('catalog_viewer','1');
+    $('viewer-pw-screen').style.display = 'none';
+    showApp();
+    if(_db) startSync();
+  } else {
+    errEl.textContent = 'Incorrect password.';
+    errEl.style.display = 'block';
+    $('viewer-pw').value = '';
+  }
+}
+
+function showApp(){
+  $('auth-screen').style.display = 'none';
+  $('viewer-pw-screen').style.display = 'none';
+  $('app-shell').style.display = 'flex';
+  if(state.isViewer){
+    $('client-banner').style.display = 'block';
+    $('tab-signout').querySelector('.bottom-tab-label').textContent = 'Exit';
+  }
+  applyBranding();
+}
+
+// ── FIREBASE SYNC ────────────────────────────────────────────────────────────
+function startSync(){
+  _db.ref('fob_manager').on('value', snap => {
+    const data = snap.val();
+    if(!data) return;
+    if(data.items) state.items = data.items.map(r => ({refCode:'',currency:'EUR',weight:0,specs:{},...r}));
+    if(data.settings) state.settings = data.settings;
+    state.loaded = true;
+    applyBranding();
+    render();
+  });
+}
+
+function applyBranding(){
+  const c = state.settings?.company || {};
+  const sys = state.settings?.system || {};
+  const name = sys.name || 'JCBL Agri e-Catalog';
+  const sub  = c.tagline || 'Agricultural & Industrial Parts';
+  if($('hdr-name')) $('hdr-name').textContent = name;
+  if($('hdr-sub'))  $('hdr-sub').textContent  = sub;
+  if($('auth-app-name')) $('auth-app-name').textContent = name;
+  if($('auth-app-sub'))  $('auth-app-sub').textContent  = 'Sign in to access the catalogue';
+  if(c.logo && $('hdr-logo')){
+    $('hdr-logo').innerHTML = `<img class="app-logo-img" src="${c.logo}" alt="logo">`;
+    $('hdr-logo').className = '';
+  }
+  document.title = name;
+}
+
+// ── RENDER ───────────────────────────────────────────────────────────────────
+function getFiltered(){
+  const q = state.searchQ.toLowerCase().trim();
+  const f = state.filters;
+  return state.items.filter(item => {
+    // category filter
+    if(f.categories?.length && !f.categories.includes(item.category)) return false;
+    // material filter
+    if(f.material && !(item.material||'').toLowerCase().includes(f.material.toLowerCase())) return false;
+    // weight range
+    const wt = parseFloat(item.weight)||0;
+    if(f.weightMin && wt < parseFloat(f.weightMin)) return false;
+    if(f.weightMax && wt > parseFloat(f.weightMax)) return false;
+    // currency
+    if(f.currency && item.currency !== f.currency) return false;
+    // specs search
+    if(f.specs){
+      const allSpecs = JSON.stringify(item.specs||{}).toLowerCase() + ' ' + (item.type||'').toLowerCase();
+      if(!allSpecs.includes(f.specs.toLowerCase())) return false;
+    }
+    // search query
+    if(q){
+      const hay = [item.item, item.refCode, item.category, item.type, item.material,
+        item.remarks, item.comment, JSON.stringify(item.specs||{})].map(v=>(v||'').toLowerCase()).join(' ');
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+function render(){
+  const grid   = $('product-grid');
+  const loading = $('loading-state');
+  const empty  = $('empty-state');
+  if(!state.loaded){ loading.style.display='flex'; grid.style.display='none'; empty.style.display='none'; return; }
+  loading.style.display = 'none';
+  const items = getFiltered();
+  if(!items.length){ empty.style.display='flex'; grid.style.display='none'; return; }
+  empty.style.display = 'none';
+  grid.style.display = 'grid';
+  grid.className = 'product-grid' + (state.gridView ? '' : ' list-view');
+  grid.innerHTML = items.map(item => productCard(item)).join('');
+  updateSelBar();
+  updateActivePills();
+}
+
+function productCard(item){
+  const fob  = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const sym  = curSym(item.currency||'EUR');
+  const sel  = state.selected.has(item.id);
+  const code = item.item || '';
+  const ref  = item.refCode || '';
+  const photo = item.photo;
+  const imgEl = photo
+    ? `<div class="card-img"><img src="${photo}" loading="lazy" alt="${esc(code)}"></div>`
+    : `<div class="card-img">📦</div>`;
+  const priceEl = (!state.isViewer) ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
+
+  return `<div class="product-card${sel?' selected':''}" onclick="openDetail(${item.id})">
+  <div class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</div>
+  ${imgEl}
+  <div class="card-body">
+    <div class="card-code">${esc(code)}${ref?' · <span style="color:#7c3aed">'+esc(ref)+'</span>':''}</div>
+    <div class="card-name">${esc(item.type||item.item||'—')}</div>
+    <div><span class="card-cat ${catCls(item.category)}">${esc(item.category||'')}</span></div>
+    ${priceEl}
+    ${item.weight ? `<div class="card-weight">${item.weight} kg</div>` : ''}
+  </div>
+</div>`;
+}
+
+// ── SEARCH & FILTER ──────────────────────────────────────────────────────────
+function applyFilters(){
+  const q = $('search').value;
+  state.searchQ = q;
+  $('search-clear').style.display = q ? 'block' : 'none';
+  render();
+}
+
+function clearSearch(){ $('search').value=''; state.searchQ=''; $('search-clear').style.display='none'; render(); }
+
+function updateActivePills(){
+  const f = state.filters;
+  const pills = [];
+  if(f.categories?.length) pills.push(...f.categories.map(c=>`<div class="fpill" onclick="removeCatFilter('${c}')"><span>${c}</span><span class="fpill-x">✕</span></div>`));
+  if(f.material) pills.push(`<div class="fpill" onclick="state.filters.material='';render()"><span>Mat: ${esc(f.material)}</span><span class="fpill-x">✕</span></div>`);
+  if(f.currency) pills.push(`<div class="fpill" onclick="state.filters.currency='';render()"><span>${f.currency}</span><span class="fpill-x">✕</span></div>`);
+  if(f.weightMin||f.weightMax) pills.push(`<div class="fpill" onclick="state.filters.weightMin='';state.filters.weightMax='';render()"><span>Wt: ${f.weightMin||'0'}–${f.weightMax||'∞'} kg</span><span class="fpill-x">✕</span></div>`);
+  if(f.specs) pills.push(`<div class="fpill" onclick="state.filters.specs='';render()"><span>Spec: ${esc(f.specs)}</span><span class="fpill-x">✕</span></div>`);
+  const hasPills = pills.length > 0;
+  const cnt = getFiltered().length;
+  const row = $('active-pills');
+  row.innerHTML = hasPills ? (pills.join('')+`<div class="active-count">${cnt} result${cnt!==1?'s':''}</div>`) : '';
+  $('filter-btn').className = 'filter-btn' + (hasPills?' has-filter':'');
+}
+
+function removeCatFilter(cat){
+  state.filters.categories = (state.filters.categories||[]).filter(c=>c!==cat);
+  render();
+}
+
+function openFilterSheet(){
+  const f = state.filters;
+  // Get unique materials from items
+  const mats = [...new Set(state.items.map(r=>r.material).filter(Boolean))].sort().slice(0,20);
+  $('filter-body').innerHTML = `
+<div class="filter-section">
+  <div class="filter-section-title">Category</div>
+  <div class="filter-chips">
+    ${CATEGORIES.map(c=>`<div class="fchip ${(f.categories||[]).includes(c)?'active':''}" onclick="toggleCatChip(this,'${c}')">${c}</div>`).join('')}
+  </div>
+</div>
+<div class="filter-section">
+  <div class="filter-section-title">Material</div>
+  <div class="filter-chips">
+    ${mats.map(m=>`<div class="fchip ${f.material===m?'active':''}" onclick="toggleMat(this,'${m.replace(/'/g,"\\'")}' )">${m}</div>`).join('')}
+  </div>
+  <input style="margin-top:10px;width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--font)" id="mat-custom" placeholder="Or type material…" value="${esc(f.material||'')}">
+</div>
+<div class="filter-section">
+  <div class="filter-section-title">Weight Range (kg)</div>
+  <div class="filter-range">
+    <input type="number" id="wt-min" placeholder="Min" value="${f.weightMin||''}" step="0.1" min="0">
+    <span class="filter-range-sep">to</span>
+    <input type="number" id="wt-max" placeholder="Max" value="${f.weightMax||''}" step="0.1" min="0">
+  </div>
+</div>
+<div class="filter-section">
+  <div class="filter-section-title">Currency</div>
+  <div class="filter-chips">
+    ${CURRENCIES.map(c=>`<div class="fchip ${f.currency===c?'active':''}" onclick="toggleCur(this,'${c}')">${c}</div>`).join('')}
+  </div>
+</div>
+<div class="filter-section">
+  <div class="filter-section-title">Search within Specs / Dimensions</div>
+  <input style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--mono)" id="spec-search" placeholder="e.g. M12, 50mm, DIN 933…" value="${esc(f.specs||'')}">
+</div>`;
+  $('filter-sheet').classList.add('open');
+  $('filter-backdrop').classList.add('open');
+}
+
+function closeFilterSheet(){ $('filter-sheet').classList.remove('open'); $('filter-backdrop').classList.remove('open'); }
+
+function toggleCatChip(el, cat){
+  state.filters.categories = state.filters.categories || [];
+  if(state.filters.categories.includes(cat)) state.filters.categories = state.filters.categories.filter(c=>c!==cat);
+  else state.filters.categories.push(cat);
+  el.classList.toggle('active');
+}
+function toggleMat(el, mat){
+  const chips = document.querySelectorAll('#filter-body .fchip');
+  chips.forEach(c=>c.classList.remove('active'));
+  state.filters.material = state.filters.material===mat ? '' : mat;
+  if(state.filters.material) el.classList.add('active');
+}
+function toggleCur(el, cur){
+  const chips = $('filter-body').querySelectorAll('.filter-chips:last-of-type .fchip');
+  chips.forEach(c=>c.classList.remove('active'));
+  state.filters.currency = state.filters.currency===cur ? '' : cur;
+  if(state.filters.currency) el.classList.add('active');
+}
+
+function applyFilterSheet(){
+  const matCustom = $('mat-custom')?.value||'';
+  if(matCustom) state.filters.material = matCustom;
+  state.filters.weightMin = $('wt-min')?.value||'';
+  state.filters.weightMax = $('wt-max')?.value||'';
+  state.filters.specs = $('spec-search')?.value||'';
+  closeFilterSheet();
+  render();
+}
+
+function clearAllFilters(){ state.filters = {}; closeFilterSheet(); render(); }
+
+// ── PRODUCT DETAIL ───────────────────────────────────────────────────────────
+function openDetail(id){
+  const item = state.items.find(r=>r.id===id);
+  if(!item) return;
+  state.currentItem = item;
+  $('detail-title').textContent = item.item || item.type || 'Product';
+  renderDetail(item);
+  $('detail-sheet').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDetail(){
+  $('detail-sheet').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function renderDetail(item){
+  const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const sym = curSym(item.currency||'EUR');
+  const photos = [item.photo, ...(item.galleryPhotos||[]), ...(item.prodPhotos||[]), ...(item.packPhotos||[])].filter(Boolean);
+  const photoLabels = ['Product', ...Array(item.galleryPhotos?.length||0).fill('Gallery'), ...Array(item.prodPhotos?.length||0).fill('Production'), ...Array(item.packPhotos?.length||0).fill('Packing')];
+
+  const galleryHTML = photos.length ? `
+<div class="photo-gallery">
+  <div class="gallery-main" id="gallery-main">
+    ${photos[0] ? `<img src="${photos[0]}" id="gallery-main-img" alt="product">` : '📦'}
+  </div>
+  ${photos.length > 1 ? `<div class="gallery-tabs">
+    ${photos.map((p,i)=>`<div class="gallery-thumb ${i===0?'active':''}" onclick="setPhoto(${i})" id="gthumb-${i}">
+      ${p ? `<img src="${p}" alt="${photoLabels[i]}">` : '📦'}
+    </div>`).join('')}
+  </div>` : ''}
+</div>` : `<div style="width:100%;height:220px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:60px;color:var(--text3)">📦</div>`;
+
+  const specs = item.specs || {};
+  const specsHTML = Object.keys(specs).length ? Object.entries(specs).map(([k,v])=>
+    `<div class="spec-item"><div class="spec-label">${esc(k)}</div><div class="spec-val">${esc(v)}</div></div>`
+  ).join('') : '';
+
+  const priceSection = !state.isViewer ? `
+<div class="detail-section">
+  <div class="detail-section-title">Pricing</div>
+  <div class="price-card">
+    <div class="price-card-label">FOB India Price</div>
+    <div class="price-card-val">${sym}${fob.toFixed(4)}</div>
+    <div class="price-card-sub">Per unit · ${item.currency||'EUR'} · Ex: ${item.exrate} INR</div>
+  </div>
+</div>` : '';
+
+  $('detail-content').innerHTML = `
+${galleryHTML}
+<div class="detail-body">
+  <div class="detail-section">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px">
+      <div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--accent2);font-weight:600;margin-bottom:4px">${esc(item.item||'')}${item.refCode?' · <span style="color:#7c3aed">'+esc(item.refCode)+'</span>':''}</div>
+        <div style="font-size:17px;font-weight:700;color:var(--text);line-height:1.3">${esc(item.type||item.item||'—')}</div>
+      </div>
+      <span class="card-cat ${catCls(item.category)}">${esc(item.category||'')}</span>
+    </div>
+    ${item.remarks ? `<div style="font-size:13px;color:var(--text2);line-height:1.6;background:var(--surface2);padding:12px;border-radius:var(--r-sm)">${esc(item.remarks)}</div>` : ''}
+  </div>
+
+  <div class="detail-section">
+    <div class="detail-section-title">Specifications</div>
+    <div class="spec-grid">
+      <div class="spec-item"><div class="spec-label">Material</div><div class="spec-val">${esc(item.material||'—')}</div></div>
+      <div class="spec-item"><div class="spec-label">Weight</div><div class="spec-val">${item.weight ? item.weight+' kg' : '—'}</div></div>
+      <div class="spec-item"><div class="spec-label">Std Qty</div><div class="spec-val">${item.qty||'—'}</div></div>
+      <div class="spec-item"><div class="spec-label">Status</div><div class="spec-val">${esc(item.comment||'—')}</div></div>
+      ${specsHTML}
+    </div>
+  </div>
+
+  ${priceSection}
+
+  ${item.pdfAttachment ? `<div class="detail-section">
+    <div class="detail-section-title">Technical Drawing</div>
+    <a href="${item.pdfAttachment}" target="_blank" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border-radius:var(--r-sm);text-decoration:none;color:var(--text)">
+      <span style="font-size:28px">📐</span>
+      <div><div style="font-weight:700;font-size:14px">View Drawing PDF</div><div style="font-size:12px;color:var(--text3)">Tap to open</div></div>
+    </a>
+  </div>` : ''}
+
+  <div class="action-btns">
+    <button class="action-btn secondary" onclick="toggleSel(${item.id});closeDetail()">
+      ${state.selected.has(item.id) ? '✓ Selected' : '+ Select'}
+    </button>
+    <button class="action-btn primary" onclick="shareSingleProduct(${item.id})">↑ Share</button>
+  </div>
+</div>`;
+}
+
+window._photos = [];
+function setPhoto(idx){
+  window._photos = window._photos || [];
+  const img = $('gallery-main-img');
+  if(img) img.src = window._photos[idx] || '';
+  document.querySelectorAll('.gallery-thumb').forEach((el,i) => el.classList.toggle('active',i===idx));
+}
+
+// ── SELECTION ────────────────────────────────────────────────────────────────
+function toggleSel(id){
+  if(state.selected.has(id)) state.selected.delete(id);
+  else state.selected.add(id);
+  updateSelBar();
+  // Update card visually
+  const card = document.querySelector(`.product-card[onclick="openDetail(${id})"]`);
+  if(card){
+    card.classList.toggle('selected', state.selected.has(id));
+    const sel = card.querySelector('.card-select');
+    if(sel) sel.textContent = state.selected.has(id) ? '✓' : '';
+  }
+}
+
+function clearSelection(){ state.selected.clear(); updateSelBar(); render(); }
+
+function updateSelBar(){
+  const n = state.selected.size;
+  const bar = $('sel-bar');
+  const cnt = $('sel-count-text');
+  const tabLbl = $('tab-sel-count');
+  if(cnt) cnt.textContent = n + ' item' + (n!==1?'s':'') + ' selected';
+  if(tabLbl) tabLbl.textContent = n > 0 ? `Selected (${n})` : 'Selected';
+  if(bar) bar.className = 'selection-bar' + (n>0 ? '' : ' hidden');
+}
+
+// ── VIEW TOGGLE ──────────────────────────────────────────────────────────────
+function toggleView(){
+  state.gridView = !state.gridView;
+  $('view-toggle-btn').textContent = state.gridView ? '⊞' : '☰';
+  render();
+}
+
+// ── TABS ─────────────────────────────────────────────────────────────────────
+function setTab(tab){
+  state.tab = tab;
+  document.querySelectorAll('.bottom-tab').forEach(b=>b.classList.remove('active'));
+  $('tab-'+tab)?.classList.add('active');
+  if(tab==='catalogue') render();
+  if(tab==='selected'){
+    if(!state.selected.size){ notify('No items selected yet'); return; }
+    // Show only selected items
+    const prev = state.filters._selOnly;
+    state.filters._selOnly = true;
+    render();
+    state.filters._selOnly = false;
+  }
+  if(tab==='pricelist') openPriceCalc();
+}
+
+// ── PRICE CALCULATOR ─────────────────────────────────────────────────────────
+function openPriceCalc(){
+  if(!state.selected.size){ notify('Select items first to price them'); return; }
+  renderCalcBody();
+  $('price-calc-sheet').classList.add('open');
+  $('calc-backdrop').classList.add('open');
+}
+
+function closePriceCalc(){
+  $('price-calc-sheet').classList.remove('open');
+  $('calc-backdrop').classList.remove('open');
+}
+
+function setPriceMode(mode, btn){
+  state.priceMode = mode;
+  document.querySelectorAll('.price-mode-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderCalcBody();
+}
+
+function renderCalcBody(){
+  const mode = state.priceMode;
+  $('calc-body').innerHTML = `
+<div class="calc-row">
+  <div class="calc-label">Extra Margin %</div>
+  <input class="calc-input" type="number" id="calc-margin" value="${state.calcMargin}" min="0" max="200" step="0.5" oninput="calcUpdate()">
+</div>
+${(mode==='cif'||mode==='cfr') ? `<div class="calc-row">
+  <div class="calc-label">Sea Freight (€/kg)</div>
+  <input class="calc-input" type="number" id="calc-freight" value="${state.calcFreight}" min="0" step="0.01" oninput="calcUpdate()">
+</div>` : ''}
+${mode==='cif' ? `<div class="calc-row">
+  <div class="calc-label">Insurance %</div>
+  <input class="calc-input" type="number" id="calc-insure" value="0.5" min="0" step="0.1" oninput="calcUpdate()">
+</div>` : ''}
+<div style="font-size:11px;color:var(--text3);padding:4px 0 0">Based on ${state.selected.size} selected item${state.selected.size!==1?'s':''}</div>`;
+  calcUpdate();
+}
+
+function calcUpdate(){
+  const margin = parseFloat($('calc-margin')?.value)||0;
+  const freight = parseFloat($('calc-freight')?.value)||0;
+  const insure  = parseFloat($('calc-insure')?.value)||0;
+  state.calcMargin = margin;
+  state.calcFreight = freight;
+  const items = state.items.filter(r=>state.selected.has(r.id));
+  const totalFOB = items.reduce((s,r)=>s+calcFOB(r.pp,r.marg,r.fob,r.exrate)*(r.qty||1),0);
+  const totalWt  = items.reduce((s,r)=>s+(parseFloat(r.weight)||0)*(r.qty||1),0);
+  const extraFOB = totalFOB * (1 + margin/100);
+  const freightTotal = freight * totalWt;
+  const insureTotal  = extraFOB * insure / 100;
+  const finalTotal   = extraFOB + freightTotal + insureTotal;
+  const mode = state.priceMode.toUpperCase();
+  $('price-result').innerHTML = `
+<div class="price-result-lbl">${mode} Total Price</div>
+<div class="price-result-val">€${finalTotal.toFixed(2)}</div>
+<div class="price-result-sub">${items.length} items · ${mode}${margin>0?' +'+margin+'% margin':''}</div>`;
+}
+
+function applyPriceAndGenerate(){
+  closePriceCalc();
+  generatePDF();
+}
+
+// ── PDF STYLE SHEET ──────────────────────────────────────────────────────────
+function openPdfStyleSheet(){
+  $('pdf-style-sheet').classList.add('open');
+  $('pdf-style-backdrop').classList.add('open');
+}
+function closePdfStyleSheet(){
+  $('pdf-style-sheet').classList.remove('open');
+  $('pdf-style-backdrop').classList.remove('open');
+}
+function selectPdfStyle(style, el){
+  state.pdfStyle = style;
+  document.querySelectorAll('.style-option').forEach(o=>{ o.classList.remove('active'); o.lastChild.textContent=''; });
+  el.classList.add('active');
+  el.lastChild.textContent = '✓';
+}
+const _pdfMarginCb = $('pdf-custom-margin');
+if(_pdfMarginCb) _pdfMarginCb.onchange = function(){ $('pdf-margin-input').style.display=this.checked?'block':'none'; };
+
+// ── PDF GENERATION ────────────────────────────────────────────────────────────
+function generatePDF(){
+  closePdfStyleSheet();
+  const items = state.selected.size
+    ? state.items.filter(r=>state.selected.has(r.id))
+    : getFiltered();
+  if(!items.length){ notify('No items to generate PDF','error'); return; }
+  notify('Generating PDF…');
+  const showPrice = $('pdf-show-price')?.checked !== false && !state.isViewer;
+  const extraMargin = $('pdf-custom-margin')?.checked ? (parseFloat($('pdf-margin-pct')?.value)||0) : 0;
+  const freight = $('pdf-custom-margin')?.checked ? (parseFloat($('pdf-freight')?.value)||0) : 0;
+  setTimeout(() => {
+    try{
+      let doc;
+      if(state.pdfStyle==='brochure') doc = buildBrochurePDF(items, showPrice, extraMargin, freight);
+      else if(state.pdfStyle==='photo-price') doc = buildPhotoGridPDF(items, showPrice, extraMargin, freight);
+      else if(state.pdfStyle==='photo-only') doc = buildPhotoOnlyPDF(items);
+      else doc = buildPriceListPDF(items, showPrice, extraMargin, freight);
+      const blob = doc.output('blob');
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url;
+      a.download = 'JCBL_Catalogue_'+today()+'.pdf';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      notify('PDF downloaded!','success');
+    }catch(e){ notify('PDF error: '+e.message,'error'); }
+  }, 200);
+}
+
+function getPrice(item, extraMargin, freight){
+  const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const withMargin = fob * (1 + extraMargin/100);
+  const withFreight = withMargin + freight * (parseFloat(item.weight)||0);
+  return withFreight;
+}
+
+function pdfHeader(doc, title, W, c){
+  doc.setFillColor(26,58,95);doc.rect(0,0,W,22,'F');
+  if(c.logo){ try{doc.addImage(c.logo,'PNG',8,3,16,16);}catch(e){} }
+  const tx = c.logo ? 28 : 10;
+  doc.setFontSize(11);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+  doc.text(c.name||'JCBL',tx,12);
+  doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(180,210,240);
+  doc.text(c.tagline||'Manufacturer & Exporter',tx,18);
+  doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(201,168,76);
+  doc.text(title,W-10,14,{align:'right'});
+  return 28;
+}
+
+function buildBrochurePDF(items, showPrice, extraMargin, freight){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const c=state.settings?.company||{};
+  const W=210,H=297,M=14;
+  const sym = '€';
+  items.forEach((item,idx)=>{
+    if(idx>0) doc.addPage();
+    let y=pdfHeader(doc,'PRODUCT CATALOGUE',W,c);
+    // Photo
+    if(item.photo){
+      try{doc.addImage(item.photo,'JPEG',M,y,80,65,'','FAST');}catch(e){}
+    } else {
+      doc.setFillColor(237,234,228);doc.rect(M,y,80,65,'F');
+      doc.setFontSize(9);doc.setTextColor(168,162,158);doc.text('No Photo',M+40,y+34,{align:'center'});
+    }
+    // Item info
+    const ix = M+86;
+    doc.setFontSize(14);doc.setFont('helvetica','bold');doc.setTextColor(26,58,95);
+    const title = item.type||item.item||'—';
+    doc.text(doc.splitTextToSize(title,W-ix-M),ix,y+8);
+    doc.setFontSize(9);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+    doc.text(item.item||'',ix,y+20);
+    if(item.refCode){ doc.setTextColor(124,58,237); doc.text('Ref: '+item.refCode,ix,y+26); }
+    doc.setFillColor(219,234,254);doc.roundedRect(ix,y+30,(item.category.length*3+10),6,3,3,'F');
+    doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(30,64,175);
+    doc.text(item.category,ix+5,y+34);
+    y+=70;
+    // Specs
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(26,58,95);doc.text('SPECIFICATIONS',M,y);y+=2;
+    doc.setDrawColor(200,200,200);doc.line(M,y,W-M,y);y+=6;
+    const specs=[['Material',item.material||'—'],['Weight',item.weight?(item.weight+' kg'):'—'],['Std. Qty',String(item.qty||'—')],['Status',item.comment||'—'],...Object.entries(item.specs||{})];
+    const colW=(W-2*M-6)/2;
+    specs.forEach(([k,v],i)=>{
+      const x=M+(i%2)*(colW+6);const sy=y+Math.floor(i/2)*10;
+      doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(100,100,100);doc.text(k+':',x,sy);
+      doc.setFont('helvetica','normal');doc.setTextColor(28,25,23);doc.text(String(v),x+colW*0.4,sy);
+    });
+    y += Math.ceil(specs.length/2)*10+8;
+    if(item.remarks){
+      doc.setFontSize(9);doc.setFont('helvetica','bold');doc.setTextColor(26,58,95);doc.text('DESCRIPTION',M,y);y+=5;
+      doc.setFont('helvetica','normal');doc.setTextColor(50,50,50);
+      const ls=doc.splitTextToSize(item.remarks,W-2*M);
+      doc.text(ls.slice(0,4),M,y);y+=ls.slice(0,4).length*5+6;
+    }
+    // Price
+    if(showPrice){
+      const price=getPrice(item,extraMargin,freight);
+      doc.setFillColor(26,58,95);doc.rect(M,y,W-2*M,22,'F');
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(180,210,240);doc.text(extraMargin>0?'CIF/CFR Price (FOB +'+extraMargin+'% margin'+(freight>0?'+freight)':')'):'FOB India Unit Price',M+5,y+7);
+      doc.setFontSize(18);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);doc.text(sym+price.toFixed(4),M+5,y+18);
+      doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(201,168,76);doc.text('Per Unit · '+( item.currency||'EUR')+' · FOB India',W-M-5,y+18,{align:'right'});
+      y+=28;
+    }
+    // Footer
+    doc.setFillColor(26,58,95);doc.rect(0,H-8,W,8,'F');
+    doc.setFontSize(7);doc.setFont('helvetica','normal');doc.setTextColor(180,210,240);
+    doc.text((c.name||'')+' · '+(c.email||''),M,H-3);
+    doc.text('Page '+(idx+1)+'/'+items.length,W-M,H-3,{align:'right'});
+  });
+  return doc;
+}
+
+function buildPhotoGridPDF(items, showPrice, extraMargin, freight){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const c=state.settings?.company||{};
+  const W=210,H=297,M=10,perRow=3,perPage=6;
+  const cellW=(W-2*M-8)/3;const cellH=showPrice?68:60;
+  let page=0;
+  function hdr(){
+    if(page>0) doc.addPage();
+    page++;
+    doc.setFillColor(26,58,95);doc.rect(0,0,W,18,'F');
+    if(c.logo){try{doc.addImage(c.logo,'PNG',M,1,15,15);}catch(e){}}
+    doc.setFontSize(10);doc.setFont('helvetica','bold');doc.setTextColor(255,255,255);
+    doc.text(c.name||'JCBL Agri',M+(c.logo?18:0),12);
+    doc.setFontSize(8);doc.setTextColor(201,168,76);doc.text('PRODUCT CATALOGUE',W-M,12,{align:'right'});
+    return 22;
+  }
+  let y=hdr(); let col=0;
+  items.forEach((item,i)=>{
+    if(col>=perRow){col=0;y+=cellH+4;}
+    if(y+cellH>H-12){y=hdr();col=0;}
+    const x=M+col*(cellW+4);
+    doc.setDrawColor(220,220,220);doc.setFillColor(252,252,250);doc.rect(x,y,cellW,cellH,'FD');
+    if(item.photo){try{doc.addImage(item.photo,'JPEG',x+1,y+1,cellW-2,40,'','FAST');}catch(e){}}
+    else{doc.setFillColor(237,234,228);doc.rect(x+1,y+1,cellW-2,40,'F');}
+    doc.setFontSize(7.5);doc.setFont('helvetica','bold');doc.setTextColor(26,58,95);
+    doc.text(doc.splitTextToSize(item.item||'—',cellW-4),x+2,y+44);
+    doc.setFont('helvetica','normal');doc.setFontSize(6.5);doc.setTextColor(80,80,80);
+    doc.text(doc.splitTextToSize(item.type||'',cellW-4).slice(0,2),x+2,y+50);
+    if(showPrice){
+      const p=getPrice(item,extraMargin,freight);
+      doc.setFont('helvetica','bold');doc.setFontSize(9);doc.setTextColor(22,101,52);
+      doc.text('€'+p.toFixed(4),x+2,y+64);
+    }
+    col++;
+  });
+  const tot=doc.internal.getNumberOfPages();
+  for(let p=1;p<=tot;p++){doc.setPage(p);doc.setFillColor(26,58,95);doc.rect(0,H-7,W,7,'F');doc.setFontSize(6.5);doc.setTextColor(180,210,240);doc.text(c.name||'',M,H-2.5);doc.text('Page '+p+'/'+tot,W-M,H-2.5,{align:'right'});}
+  return doc;
+}
+
+function buildPhotoOnlyPDF(items){
+  return buildPhotoGridPDF(items, false, 0, 0);
+}
+
+function buildPriceListPDF(items, showPrice, extraMargin, freight){
+  const {jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:'mm',format:'a4'});
+  const c=state.settings?.company||{};
+  const W=210,M=14;
+  let y=pdfHeader(doc,'PRICE LIST',W,c);
+  doc.setFontSize(8);doc.setFont('helvetica','normal');doc.setTextColor(100,100,100);
+  doc.text('Date: '+today()+(extraMargin>0?' · Margin: +'+extraMargin+'%':'')+(freight>0?' · Freight: €'+freight+'/kg':''),M,y);y+=8;
+  const head=[['#','Code','Ref Code','Description','Material','Wt(kg)','Qty']];
+  if(showPrice) head[0].push('Unit Price');
+  const body=items.map((it,i)=>{
+    const row=[i+1,it.item||'',it.refCode||'',it.type||'',it.material||'',it.weight||'',it.qty||''];
+    if(showPrice) row.push('€'+getPrice(it,extraMargin,freight).toFixed(4));
+    return row;
+  });
+  doc.autoTable({head,body,startY:y,margin:{left:M,right:M},styles:{fontSize:8,cellPadding:3},headStyles:{fillColor:[26,58,95],textColor:255,fontStyle:'bold'},alternateRowStyles:{fillColor:[248,247,244]},footStyles:{fillColor:[220,238,250],textColor:[22,101,52],fontStyle:'bold'}});
+  const tot=doc.internal.getNumberOfPages();
+  for(let p=1;p<=tot;p++){doc.setPage(p);doc.setFillColor(26,58,95);doc.rect(0,297-7,W,7,'F');doc.setFontSize(7);doc.setTextColor(180,210,240);doc.text(c.name||'',M,294.5);doc.text('Page '+p+'/'+tot,W-M,294.5,{align:'right'});}
+  return doc;
+}
+
+// ── SHARE ────────────────────────────────────────────────────────────────────
+function shareCurrentProduct(){
+  const item = state.currentItem;
+  if(!item) return;
+  const fob = calcFOB(item.pp,item.marg,item.fob,item.exrate);
+  const text = `*${item.type||item.item}*\nCode: ${item.item}${item.refCode?' | Ref: '+item.refCode:''}\nCategory: ${item.category}\nMaterial: ${item.material||'—'}\nWeight: ${item.weight||'—'} kg${!state.isViewer?'\nFOB Price: €'+fob.toFixed(4):''}`;
+  if(navigator.share){
+    navigator.share({title:item.type||item.item,text}).catch(()=>copyText(text));
+  } else {
+    const url = 'https://wa.me/?text='+encodeURIComponent(text);
+    window.open(url,'_blank');
+  }
+}
+
+function shareSingleProduct(id){
+  const item = state.items.find(r=>r.id===id);
+  if(!item) return;
+  state.currentItem = item;
+  shareCurrentProduct();
+}
+
+function generateAndShare(){
+  openPdfStyleSheet();
+}
+
+function copyText(text){
+  navigator.clipboard?.writeText(text).then(()=>notify('Copied!','success')).catch(()=>notify(text.substring(0,60)));
+}
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+function init(){
+  // Check if viewer was previously set
+  if(localStorage.getItem('catalog_viewer')==='1'){
+    state.isViewer = true;
+  }
+  const cfg = getConfig();
+  if(!cfg){
+    $('setup-screen').style.display = 'flex';
+    return;
+  }
+  if(state.isViewer){
+    initFirebase(cfg);
+    showApp();
+    startSync();
+    return;
+  }
+  initFirebase(cfg);
+  $('auth-screen').style.display = 'flex';
+}
+
+// Run
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+</script>
+</body>
+</html>
