@@ -249,23 +249,6 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 
 <div id="notif" class="notif"></div>
 
-<!-- SETUP SCREEN -->
-<div class="full-screen" id="setup-screen" style="display:none">
-  <div class="auth-card">
-    <div class="auth-logo">🔥</div>
-    <div class="auth-title">Connect to Firebase</div>
-    <div class="auth-sub">Paste your Firebase config to sync with FOB Manager Pro</div>
-    <div class="setup-step"><div class="setup-num">1</div><div>Go to <strong>console.firebase.google.com</strong> → Your project → ⚙️ Settings → General → Your apps → Web → Copy firebaseConfig</div></div>
-    <div class="setup-step"><div class="setup-num">2</div><div>Paste the full code block below (same config as FOB Manager)</div></div>
-    <div class="auth-field">
-      <label>Firebase Config</label>
-      <textarea id="setup-config" placeholder='{&#10;  "apiKey": "AIza...",&#10;  "databaseURL": "https://your-project-default-rtdb.firebaseio.com",&#10;  ...&#10;}'></textarea>
-    </div>
-    <div id="setup-err" class="auth-err"></div>
-    <button class="auth-btn" onclick="saveConfig()">🔥 Connect &amp; Continue</button>
-  </div>
-</div>
-
 <!-- AUTH SCREEN -->
 <div class="full-screen" id="auth-screen" style="display:none">
   <div class="auth-card">
@@ -340,15 +323,19 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 
   <!-- CONTENT -->
   <div class="content-area" id="content-area">
-    <div class="loading" id="loading-state">
+    <div class="loading" id="loading-state" style="flex-direction:column;align-items:center;padding:20px">
       <div class="spinner"></div>
-      <div style="font-size:13px;color:var(--text3);font-weight:600">Loading catalogue…</div>
+      <div style="font-size:13px;color:var(--text3);font-weight:600;margin-top:12px">Connecting to Firebase…</div>
+      <div style="margin-top:16px;width:100%;max-width:460px;background:#f8f8f8;border:1px solid #ddd;border-radius:10px;padding:12px;max-height:200px;overflow-y:auto;text-align:left" id="debug-panel">
+        <div style="font-size:10px;font-weight:700;color:#999;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">Debug Log</div>
+      </div>
+      <button onclick="localStorage.removeItem('catalog_viewer');location.reload()" style="margin-top:12px;padding:10px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer">🔄 Retry</button>
     </div>
     <div id="product-grid" class="product-grid" style="display:none"></div>
     <div class="empty-state" id="empty-state" style="display:none">
-      <div class="empty-icon">🔍</div>
-      <div class="empty-title">No products found</div>
-      <div class="empty-sub">Try adjusting your search or filters</div>
+      <div class="empty-icon" id="empty-icon">🔍</div>
+      <div class="empty-title" id="empty-title">No products found</div>
+      <div class="empty-sub" id="empty-sub">Try adjusting your search or filters</div>
     </div>
   </div>
 
@@ -525,9 +512,17 @@ function notify(msg, type){
 }
 
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
-function getConfig(){
-  try{ return JSON.parse(localStorage.getItem('fob_fb_config')||'null'); }catch(e){return null;}
-}
+// Firebase config is hardcoded - no setup needed
+const FIREBASE_CFG = {
+  apiKey: "AIzaSyADhhWExaekdwwHUbhClPT_k5JPbnxGLC0",
+  authDomain: "fob-manager-64dcc.firebaseapp.com",
+  databaseURL: "https://fob-manager-64dcc-default-rtdb.firebaseio.com",
+  projectId: "fob-manager-64dcc",
+  storageBucket: "fob-manager-64dcc.firebasestorage.app",
+  messagingSenderId: "974497909567",
+  appId: "1:974497909567:web:ed2b3a5ddc8de5585ca18a"
+};
+function getConfig(){ return FIREBASE_CFG; }
 
 function saveConfig(){
   const raw = ($('setup-config').value||'').trim();
@@ -552,11 +547,14 @@ function saveConfig(){
 }
 
 function initFirebase(cfg){
+  debugLog('initFirebase called');
+  debugLog('Project: '+cfg.projectId);
   try{
     if(!firebase.apps.length) firebase.initializeApp(cfg);
     _db   = firebase.database();
     _auth = firebase.auth();
     _db.ref('.info/connected').on('value', s => {
+    debugLog('Database connection: '+(s.val()?'CONNECTED':'DISCONNECTED'));
       const dot = $('conn-dot');
       if(dot) dot.className = 'conn-dot' + (s.val() ? ' online' : '');
     });
@@ -587,12 +585,7 @@ function doSignIn(){
 }
 
 function doSignOut(){
-  if(state.isViewer){
-    state.isViewer = false;
-    localStorage.removeItem('catalog_viewer');
-    location.reload();
-    return;
-  }
+  if(state.isViewer){ state.isViewer=false; localStorage.removeItem('catalog_viewer'); location.reload(); return; }
   if(!confirm('Sign out?')) return;
   _auth.signOut().then(() => location.reload());
 }
@@ -607,16 +600,31 @@ function checkViewerPw(){
   const entered = $('viewer-pw').value;
   const correct = state.settings?.system?.viewerPassword || '';
   const errEl = $('viewer-pw-err');
+  // If no password set, or matches - allow in
   if(!correct || entered === correct){
     state.isViewer = true;
     localStorage.setItem('catalog_viewer','1');
     $('viewer-pw-screen').style.display = 'none';
     showApp();
-    if(_db) startSync();
+    if(!_db){ initFirebase(FIREBASE_CFG); }
+    startSync();
   } else {
     errEl.textContent = 'Incorrect password.';
     errEl.style.display = 'block';
     $('viewer-pw').value = '';
+    $('viewer-pw').focus();
+  }
+}
+
+function debugLog(msg){
+  console.log('[CATALOG] '+msg);
+  const panel = document.getElementById('debug-panel');
+  if(panel){
+    const line = document.createElement('div');
+    line.style.cssText='font-size:11px;padding:3px 0;border-bottom:1px solid #eee;font-family:monospace;color:#333;word-break:break-all';
+    line.textContent = new Date().toLocaleTimeString()+' — '+msg;
+    panel.appendChild(line);
+    panel.scrollTop = panel.scrollHeight;
   }
 }
 
@@ -633,9 +641,21 @@ function showApp(){
 
 // ── FIREBASE SYNC ────────────────────────────────────────────────────────────
 function startSync(){
+  state.loaded = false;
+  debugLog('Connecting to Firebase database...');
+  debugLog('Database URL: '+(_db.app.options.databaseURL||'unknown'));
   _db.ref('fob_manager').on('value', snap => {
     const data = snap.val();
-    if(!data) return;
+    debugLog('Data received. Type: '+(data===null?'NULL':typeof data));
+    if(data) debugLog('Keys: '+Object.keys(data).join(', '));
+    state.loaded = true;
+    if(!data){
+      debugLog('WARNING: fob_manager node is empty/null in Firebase');
+      debugLog('Open FOB Manager Pro on desktop and make sure it is connected to fob-manager-64dcc project');
+      render(); return;
+    }
+    if(data.items) debugLog('Items found: '+data.items.length);
+    else debugLog('WARNING: No items array in data');
     if(data.items) state.items = data.items.map(r => ({refCode:'',currency:'EUR',weight:0,specs:{},...r}));
     if(data.settings) state.settings = data.settings;
     state.loaded = true;
@@ -691,13 +711,43 @@ function getFiltered(){
 }
 
 function render(){
-  const grid   = $('product-grid');
+  const grid    = $('product-grid');
   const loading = $('loading-state');
-  const empty  = $('empty-state');
-  if(!state.loaded){ loading.style.display='flex'; grid.style.display='none'; empty.style.display='none'; return; }
+  const empty   = $('empty-state');
+  if(!state.loaded){
+    loading.style.display='flex';
+    grid.style.display='none';
+    empty.style.display='none';
+    // Show timeout message after 8 seconds
+    if(!render._timer){
+      render._timer = setTimeout(function(){
+        if(!state.loaded){
+          var s=loading.querySelector('div:last-child');
+          if(s){
+            s.innerHTML='';
+            s.textContent='Slow connection or Firebase not configured.';
+            var btn=document.createElement('button');
+            btn.textContent='Re-configure Firebase';
+            btn.style.cssText='margin-top:12px;padding:10px 20px;background:#1e3a5f;color:#fff;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;display:block;width:100%';
+            btn.onclick=function(){location.reload();};
+            s.appendChild(btn);
+          }
+        }
+      }, 8000);
+    }
+    return;
+  }
+  clearTimeout(render._timer); render._timer = null;
   loading.style.display = 'none';
   const items = getFiltered();
-  if(!items.length){ empty.style.display='flex'; grid.style.display='none'; return; }
+  if(!items.length){
+    empty.style.display='flex'; grid.style.display='none';
+    const hasItems = state.items.length > 0;
+    const icon  = $('empty-icon');  if(icon)  icon.textContent  = hasItems ? '🔍' : '📦';
+    const title = $('empty-title'); if(title) title.textContent = hasItems ? 'No products found' : 'Catalogue is empty';
+    const sub   = $('empty-sub');   if(sub)   sub.textContent   = hasItems ? 'Try adjusting your search or filters' : 'Add items in FOB Manager Pro on your desktop — they will appear here automatically';
+    return;
+  }
   empty.style.display = 'none';
   grid.style.display = 'grid';
   grid.className = 'product-grid' + (state.gridView ? '' : ' list-view');
@@ -1279,23 +1329,15 @@ function copyText(text){
 
 // ── INIT ─────────────────────────────────────────────────────────────────────
 function init(){
-  // Check if viewer was previously set
+  // Config is hardcoded - go straight to Firebase
   if(localStorage.getItem('catalog_viewer')==='1'){
     state.isViewer = true;
-  }
-  const cfg = getConfig();
-  if(!cfg){
-    $('setup-screen').style.display = 'flex';
-    return;
-  }
-  if(state.isViewer){
-    initFirebase(cfg);
+    initFirebase(FIREBASE_CFG);
     showApp();
     startSync();
     return;
   }
-  initFirebase(cfg);
-  $('auth-screen').style.display = 'flex';
+  initFirebase(FIREBASE_CFG);
 }
 
 // Run
