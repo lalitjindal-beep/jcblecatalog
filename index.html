@@ -98,24 +98,24 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 /* ── PRODUCT CARDS ── */
 .product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .product-grid.list-view{grid-template-columns:1fr}
-.product-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .2s;cursor:pointer;position:relative;display:flex;flex-direction:column}
+.product-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);box-shadow:var(--shadow-sm);transition:all .2s;cursor:pointer;position:relative;display:flex;flex-direction:column}
 .product-card:active{transform:scale(.97);box-shadow:var(--shadow-sm)}
 .product-card.selected{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
-.card-img{width:100%;aspect-ratio:1;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text3);overflow:hidden;flex-shrink:0}
-.card-img img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply}
-.card-body{padding:7px 8px;flex:1;display:flex;flex-direction:column;min-height:0}
+.card-img-wrap{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:var(--r) var(--r) 0 0;flex-shrink:0;background:#fff}
+.card-img-wrap img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply}
+.card-img-wrap .no-photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text3)}
+.card-select{position:absolute;top:6px;right:6px;z-index:10;width:28px;height:28px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:13px;color:var(--text3);line-height:1;padding:0}
+.card-select:active{transform:scale(.88)}
+.product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff;box-shadow:0 1px 6px rgba(30,58,95,.35)}
+.card-body{padding:7px 8px;flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;border-radius:0 0 var(--r) var(--r)}
 .card-code{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--accent2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .card-cat{display:inline-block;padding:1px 6px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
 .card-price{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--green)}
 .card-weight{font-size:9.5px;color:var(--text3);font-family:var(--mono)}
-.card-select{position:absolute;top:0;right:0;width:36px;height:36px;background:rgba(255,255,255,.85);border:none;border-radius:0 var(--r) 0 12px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-.product-card.selected .card-select{background:var(--accent2);color:#fff}
-.product-card:not(.selected) .card-select::after{content:'☐';font-size:18px;color:var(--text3)}
-.product-card.selected .card-select::after{content:'☑';font-size:18px;color:#fff}
-/* List view card */
+/* List view */
 .product-grid.list-view .product-card{flex-direction:row}
-.product-grid.list-view .card-img{width:80px;height:80px;aspect-ratio:unset;flex-shrink:0;border-radius:0}
+.product-grid.list-view .card-img-wrap{width:80px;height:80px;aspect-ratio:unset;flex-shrink:0;border-radius:var(--r) 0 0 var(--r)}
 .product-grid.list-view .card-body{padding:10px 11px;justify-content:center}
 
 /* ── BOTTOM BAR ── */
@@ -843,12 +843,11 @@ function productCard(item){
   const ref  = item.refCode || '';
   const photo = item.photo;
   const imgEl = photo
-    ? `<div class="card-img"><img src="${photo}" loading="lazy" alt="${esc(code)}"></div>`
-    : `<div class="card-img">📦</div>`;
+    ? `<div class="card-img-wrap"><img src="${photo}" loading="lazy" alt="${esc(code)}"><button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</button></div>`
+    : `<div class="card-img-wrap"><div class="no-photo">📦</div><button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</button></div>`;
   const priceEl = (!state.isViewer) ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
 
   return `<div class="product-card${sel?' selected':''}" onclick="openDetail(${item.id})">
-  <button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})" title="${sel?'Deselect':'Select'}"></button>
   ${imgEl}
   <div class="card-body">
     <div class="card-code">${esc(code)}${ref?' · <span style="color:#7c3aed">'+esc(ref)+'</span>':''}</div>
@@ -1081,7 +1080,10 @@ function toggleSel(id){
   // Update card visually
   const card = document.querySelector(`.product-card[onclick="openDetail(${id})"]`);
   if(card){
-    card.classList.toggle('selected', state.selected.has(id));
+    const isNowSel = state.selected.has(id);
+    card.classList.toggle('selected', isNowSel);
+    const btn = card.querySelector('.card-select');
+    if(btn) btn.textContent = isNowSel ? '✓' : '';
   }
 }
 
