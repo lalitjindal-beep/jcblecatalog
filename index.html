@@ -62,6 +62,9 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .app-header-text{flex:1;min-width:0}
 .app-header-title{font-size:14px;font-weight:700;color:#fff;letter-spacing:.04em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .app-header-sub{font-size:10px;color:rgba(255,255,255,.45);letter-spacing:.03em;margin-top:1px}
+.price-toggle-btn{flex-shrink:0;height:30px;padding:0 12px;border-radius:var(--r-full);border:1.5px solid rgba(255,255,255,.3);background:rgba(255,255,255,.1);color:#fff;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--font);white-space:nowrap;transition:all .15s}
+.price-toggle-btn.with-price{background:var(--green);border-color:var(--green)}
+.price-toggle-btn.without-price{background:rgba(255,255,255,.12)}
 .hdr-btn{width:36px;height:36px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.18);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;flex-shrink:0;transition:background .15s;color:#fff}
 .hdr-btn:active{background:rgba(255,255,255,.22)}
 .viewer-badge{padding:3px 10px;background:rgba(201,168,76,.2);border:1px solid rgba(201,168,76,.4);border-radius:20px;font-size:9.5px;font-weight:700;color:#ffd700;white-space:nowrap}
@@ -359,6 +362,7 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
     <div class="conn-dot-wrap" title="Connection status">
       <div class="conn-dot" id="conn-dot"></div>
     </div>
+    <button class="price-toggle-btn" id="price-toggle-btn" onclick="togglePriceMode()" title="Toggle prices visibility"></button>
     <div class="hdr-btn" onclick="toggleView()" id="view-toggle-btn" title="Toggle view">⊞</div>
     <div class="hdr-btn" onclick="openPdfStyleSheet()" title="Generate PDF">📄</div>
   </div>
@@ -559,6 +563,7 @@ const CUR_SYM = {EUR:'€',USD:'$',GBP:'£',PLN:'zł',SEK:'kr',DKK:'kr',NOK:'kr'
 
 let state = {
   items: [], settings: {}, isViewer: false, isPpUnlocked: false,
+  showPrices: false,
   searchQ: '', filters: {},
   selected: new Set(),
   gridView: true, // true=grid, false=list
@@ -714,6 +719,7 @@ function showApp(){
     $('client-banner').style.display = 'block';
     $('tab-signout').querySelector('.bottom-tab-label').textContent = 'Exit';
   }
+  updatePriceToggleBtn();
   applyBranding();
 }
 
@@ -765,6 +771,8 @@ function getFiltered(){
   return state.items.filter(item => {
     // selected-only tab
     if(f._selOnly && !state.selected.has(item.id)) return false;
+    // product type filter (ecommerce style)
+    if(f.types?.length && !f.types.includes(item.type)) return false;
     // category filter
     if(f.categories?.length && !f.categories.includes(item.category)) return false;
     // material filter
@@ -845,7 +853,7 @@ function productCard(item){
   const imgEl = photo
     ? `<div class="card-img-wrap"><img src="${photo}" loading="lazy" alt="${esc(code)}"><button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</button></div>`
     : `<div class="card-img-wrap"><div class="no-photo">📦</div><button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</button></div>`;
-  const priceEl = (!state.isViewer) ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
+  const priceEl = state.showPrices ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
 
   return `<div class="product-card${sel?' selected':''}" onclick="openDetail(${item.id})">
   ${imgEl}
@@ -872,6 +880,7 @@ function clearSearch(){ $('search').value=''; state.searchQ=''; $('search-clear'
 function updateActivePills(){
   const f = state.filters;
   const pills = [];
+  if(f.types?.length) pills.push(...f.types.map(t=>`<div class="fpill" onclick="removeTypeFilter('${t.replace(/'/g,"\\'")}' )"><span>${esc(t)}</span><span class="fpill-x">✕</span></div>`));
   if(f.categories?.length) pills.push(...f.categories.map(c=>`<div class="fpill" onclick="removeCatFilter('${c}')"><span>${c}</span><span class="fpill-x">✕</span></div>`));
   if(f.material) pills.push(`<div class="fpill" onclick="state.filters.material='';render()"><span>Mat: ${esc(f.material)}</span><span class="fpill-x">✕</span></div>`);
   if(f.currency) pills.push(`<div class="fpill" onclick="state.filters.currency='';render()"><span>${f.currency}</span><span class="fpill-x">✕</span></div>`);
@@ -884,6 +893,11 @@ function updateActivePills(){
   $('filter-btn').className = 'filter-btn' + (hasPills?' has-filter':'');
 }
 
+function removeTypeFilter(t){
+  state.filters.types = (state.filters.types||[]).filter(x=>x!==t);
+  render();
+}
+
 function removeCatFilter(cat){
   state.filters.categories = (state.filters.categories||[]).filter(c=>c!==cat);
   render();
@@ -893,7 +907,16 @@ function openFilterSheet(){
   const f = state.filters;
   // Get unique materials from items
   const mats = [...new Set(state.items.map(r=>r.material).filter(Boolean))].sort().slice(0,20);
+  // Get unique product types (e.g. "Finger Guard", "Eye Bolt") - ecommerce style "type" filter
+  const types = [...new Set(state.items.map(r=>r.type).filter(Boolean))].sort();
   $('filter-body').innerHTML = `
+<div class="filter-section">
+  <div class="filter-section-title">Product Type</div>
+  <input style="margin-bottom:10px;width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--font)" id="type-search" placeholder="Search product type…" oninput="filterTypeChips(this.value)">
+  <div class="filter-chips" id="type-chips" style="max-height:180px;overflow-y:auto">
+    ${types.map(t=>`<div class="fchip ${(f.types||[]).includes(t)?'active':''}" data-type="${esc(t)}" onclick="toggleTypeChip(this,'${t.replace(/'/g,"\\'")}' )">${esc(t)}</div>`).join('')}
+  </div>
+</div>
 <div class="filter-section">
   <div class="filter-section-title">Category</div>
   <div class="filter-chips">
@@ -927,6 +950,21 @@ function openFilterSheet(){
 </div>`;
   $('filter-sheet').classList.add('open');
   $('filter-backdrop').classList.add('open');
+}
+
+function toggleTypeChip(el, type){
+  state.filters.types = state.filters.types || [];
+  if(state.filters.types.includes(type)) state.filters.types = state.filters.types.filter(t=>t!==type);
+  else state.filters.types.push(type);
+  el.classList.toggle('active');
+}
+
+function filterTypeChips(q){
+  q = q.toLowerCase().trim();
+  document.querySelectorAll('#type-chips .fchip').forEach(chip=>{
+    const t = (chip.dataset.type||'').toLowerCase();
+    chip.style.display = !q || t.includes(q) ? '' : 'none';
+  });
 }
 
 function closeFilterSheet(){ $('filter-sheet').classList.remove('open'); $('filter-backdrop').classList.remove('open'); }
@@ -1001,7 +1039,7 @@ function renderDetail(item){
     `<div class="spec-item"><div class="spec-label">${esc(k)}</div><div class="spec-val">${esc(v)}</div></div>`
   ).join('') : '';
 
-  const priceSection = !state.isViewer ? `
+  const priceSection = state.showPrices ? `
 <div class="detail-section">
   <div class="detail-section-title">Pricing</div>
   <div class="price-card">
@@ -1236,7 +1274,7 @@ function applyPriceAndGenerate(){
   setTimeout(() => {
     try{
       let doc;
-      const showPrice = !state.isViewer;
+      const showPrice = state.showPrices;
       if(state.pdfStyle==='brochure') doc = buildBrochurePDF(items, showPrice, margin, freight);
       else if(state.pdfStyle==='photo-price') doc = buildPhotoGridPDF(items, showPrice, margin, freight);
       else if(state.pdfStyle==='photo-only') doc = buildPhotoOnlyPDF(items);
@@ -1338,7 +1376,7 @@ function generatePriceListPdf(){
   notify('Generating PDF…');
   setTimeout(()=>{
     try{
-      const doc = buildPriceListPDF(items, !state.isViewer, margin, freight);
+      const doc = buildPriceListPDF(items, state.showPrices, margin, freight);
       const blob = doc.output('blob');
       const url  = URL.createObjectURL(blob);
       const a = document.createElement('a'); a.href=url; a.download='JCBL_PriceList_'+today()+'.pdf';
@@ -1375,7 +1413,7 @@ function generatePDF(){
     : getFiltered();
   if(!items.length){ notify('No items to generate PDF','error'); return; }
   notify('Generating PDF…');
-  const showPrice = $('pdf-show-price')?.checked !== false && !state.isViewer;
+  const showPrice = $('pdf-show-price')?.checked !== false && state.showPrices;
   const extraMargin = $('pdf-custom-margin')?.checked ? (parseFloat($('pdf-margin-pct')?.value)||0) : 0;
   const freight = $('pdf-custom-margin')?.checked ? (parseFloat($('pdf-freight')?.value)||0) : 0;
   setTimeout(() => {
@@ -1595,8 +1633,8 @@ function downloadDrawingPdf(url, name){
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
 }
 
-// ── SHARE (Fix 3 — rich share with full specs) ────────────────────────────────
-function shareCurrentProduct(){
+// ── SHARE (Fix 3 — rich share with photo + full specs, ecommerce style) ───────
+async function shareCurrentProduct(){
   const item = state.currentItem;
   if(!item) return;
   const fob = calcFOB(item.pp,item.marg,item.fob,item.exrate);
@@ -1604,6 +1642,7 @@ function shareCurrentProduct(){
   const specsText = Object.entries(item.specs||{}).map(([k,v])=>`  • ${k}: ${v}`).join('\n');
   const c = state.settings?.company||{};
   const companyLine = c.name ? `\n_${c.name}${c.email?' · '+c.email:''}_` : '';
+  const showPrice = state.showPrices && fob>0;
 
   const text = [
     `*${item.type||item.item||'Product'}*`,
@@ -1616,10 +1655,20 @@ function shareCurrentProduct(){
     item.qty ? `📊 *Std. Qty:* ${item.qty}` : '',
     specsText ? `\n*Specifications:*\n${specsText}` : '',
     item.remarks ? `\n📝 ${item.remarks}` : '',
-    (!state.isViewer && fob>0) ? `\n💰 *FOB Price:* ${sym}${fob.toFixed(4)} per unit` : '',
+    showPrice ? `\n💰 *Price:* ${sym}${fob.toFixed(4)} per unit` : '',
     companyLine,
   ].filter(Boolean).join('\n');
 
+  // Try sharing WITH photo as a file (true ecommerce-style share)
+  if(item.photo && navigator.canShare){
+    try{
+      const file = await photoUrlToFile(item.photo, (item.item||'product')+'.jpg');
+      if(file && navigator.canShare({files:[file]})){
+        await navigator.share({title:item.type||item.item, text, files:[file]});
+        return;
+      }
+    }catch(e){ /* fall through to text-only share */ }
+  }
   if(navigator.share){
     navigator.share({title:item.type||item.item, text}).catch(e=>{
       if(e.name!=='AbortError') fallbackShareWhatsApp(text);
@@ -1627,6 +1676,21 @@ function shareCurrentProduct(){
   } else {
     fallbackShareWhatsApp(text);
   }
+}
+
+async function photoUrlToFile(url, filename){
+  if(url.startsWith('data:')){
+    const byteStr = atob(url.split(',')[1]);
+    const mimeMatch = url.match(/data:(.*?);/);
+    const mime = mimeMatch ? mimeMatch[1] : 'image/jpeg';
+    const ab = new ArrayBuffer(byteStr.length);
+    const ia = new Uint8Array(ab);
+    for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+    return new File([ab], filename, {type:mime});
+  }
+  const resp = await fetch(url);
+  const blob = await resp.blob();
+  return new File([blob], filename, {type:blob.type||'image/jpeg'});
 }
 
 function fallbackShareWhatsApp(text){
@@ -1641,7 +1705,30 @@ function shareSingleProduct(id){
   shareCurrentProduct();
 }
 
-// ── PP PIN (Fix 5) ────────────────────────────────────────────────────────────
+// ── GLOBAL PRICE VISIBILITY TOGGLE (With Prices / Without Prices, PIN 1234) ───
+function togglePriceMode(){
+  if(state.showPrices){
+    // turning OFF doesn't need a PIN
+    state.showPrices = false;
+    updatePriceToggleBtn();
+    render();
+    return;
+  }
+  // turning ON requires PIN
+  $('pp-modal-backdrop').classList.add('open');
+  $('pp-pin-input').value='';
+  $('pp-pin-err').textContent='';
+  setTimeout(()=>$('pp-pin-input')?.focus(),300);
+  state._pinPurpose = 'showPrices';
+}
+
+function updatePriceToggleBtn(){
+  const btn = $('price-toggle-btn');
+  if(!btn) return;
+  btn.textContent = state.showPrices ? '💰 With Prices' : '🚫 No Prices';
+  btn.className = 'price-toggle-btn ' + (state.showPrices ? 'with-price' : 'without-price');
+}
+
 function togglePpView(itemId){
   if(state.isPpUnlocked){
     showPpInDetail(itemId);
@@ -1653,18 +1740,38 @@ function togglePpView(itemId){
   $('pp-pin-err').textContent='';
   setTimeout(()=>$('pp-pin-input')?.focus(),300);
   state._ppPendingItemId = itemId;
+  state._pinPurpose = 'pp';
 }
 
 function closePpModal(){
   $('pp-modal-backdrop').classList.remove('open');
   state._ppPendingItemId = null;
+  state._pinPurpose = null;
 }
 
 function checkPpPin(){
   const entered = $('pp-pin-input').value;
-  const correct = state.settings?.system?.ppPassword || state.settings?.system?.viewerPassword || '';
   const errEl = $('pp-pin-err');
-  // If no PP password set, fall back to admin-only (no viewer access)
+  const purpose = state._pinPurpose || 'pp';
+
+  if(purpose === 'showPrices'){
+    const correct = state.settings?.system?.priceTogglePin || '1234';
+    if(entered === correct){
+      state.showPrices = true;
+      updatePriceToggleBtn();
+      closePpModal();
+      notify('Prices now visible 💰','success');
+      render();
+    } else {
+      errEl.textContent = 'Incorrect PIN. Try again.';
+      $('pp-pin-input').value='';
+      $('pp-pin-input').focus();
+    }
+    return;
+  }
+
+  // purpose === 'pp' (purchase price reveal)
+  const correct = state.settings?.system?.ppPassword || state.settings?.system?.viewerPassword || '';
   if(!correct){ errEl.textContent = 'No PP PIN set. Set ppPassword in FOB Manager Settings.'; return; }
   if(entered === correct){
     state.isPpUnlocked = true;
@@ -1727,7 +1834,7 @@ function renderQuoteBody(item){
 
 <div class="quote-row">
   <span class="quote-label">Your Margin</span>
-  <input class="quote-input" type="number" id="qq-margin" value="15" min="0" max="200" step="0.5" oninput="updateQuote()">
+  <input class="quote-input" type="number" id="qq-margin" value="0" min="0" max="200" step="0.5" oninput="updateQuote()">
   <span class="quote-unit">%</span>
 </div>
 
@@ -1839,19 +1946,27 @@ function copyQuoteText(){
   navigator.clipboard?.writeText(text).then(()=>notify('Copied!','success')).catch(()=>notify('Copy failed','error'));
 }
 
-function shareQuoteWhatsApp(){
+async function shareQuoteWhatsApp(){
   const item = state._quoteItem;
   if(!item) return;
   const sym = curSym(item.currency||'EUR');
   const final = state._qqFinal || 0;
   const text = buildQuoteText(item, final, sym);
+  // Try native share with photo first (ecommerce-style)
+  if(item.photo && navigator.canShare){
+    try{
+      const file = await photoUrlToFile(item.photo, (item.item||'product')+'.jpg');
+      if(file && navigator.canShare({files:[file]})){
+        await navigator.share({title:item.type||item.item, text, files:[file]});
+        return;
+      }
+    }catch(e){ /* fall through */ }
+  }
   const url = 'https://wa.me/?text='+encodeURIComponent(text);
   window.open(url,'_blank');
 }
 
 function buildQuoteText(item, price, sym){
-  const margin = state._qqMargin||0;
-  const freightKg = state._qqFreight||0;
   const specsText = Object.entries(item.specs||{}).map(([k,v])=>`  • ${k}: ${v}`).join('\n');
   const c = state.settings?.company||{};
   return [
@@ -1864,7 +1979,6 @@ function buildQuoteText(item, price, sym){
     specsText ? `\n*Specs:*\n${specsText}` : '',
     ``,
     `💰 *Unit Price: ${sym}${price.toFixed(4)}*`,
-    (margin>0||freightKg>0) ? `_(${margin>0?'+'+margin+'% margin':''}${freightKg>0?' +freight':''}${state.priceMode?' '+state.priceMode.toUpperCase():''})_` : '',
     ``,
     c.name ? `_${c.name}${c.email?' · '+c.email:''}_` : '',
     `_Valid for 7 days · Subject to availability_`,
