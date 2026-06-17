@@ -96,25 +96,25 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .empty-sub{font-size:13px;line-height:1.6}
 
 /* ── PRODUCT CARDS ── */
-.product-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.product-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .product-grid.list-view{grid-template-columns:1fr}
-.product-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .2s;cursor:pointer;position:relative}
+.product-card{background:#fff;border-radius:var(--r);border:1px solid var(--border);overflow:hidden;box-shadow:var(--shadow-sm);transition:all .2s;cursor:pointer;position:relative;display:flex;flex-direction:column}
 .product-card:active{transform:scale(.97);box-shadow:var(--shadow-sm)}
 .product-card.selected{border-color:var(--accent2);box-shadow:0 0 0 2px var(--accent2)}
-.card-img{width:100%;aspect-ratio:1;object-fit:cover;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:36px;color:var(--text3)}
-.card-img img{width:100%;height:100%;object-fit:cover}
-.card-body{padding:10px 11px}
-.card-code{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--accent2);margin-bottom:3px}
-.card-name{font-size:12.5px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.card-cat{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin-bottom:5px}
-.card-price{font-family:var(--mono);font-size:14px;font-weight:800;color:var(--green)}
-.card-weight{font-size:10.5px;color:var(--text3);font-family:var(--mono)}
-.card-select{position:absolute;top:8px;right:8px;width:24px;height:24px;background:#fff;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;transition:all .15s;box-shadow:var(--shadow-sm)}
+.card-img{width:100%;aspect-ratio:1;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text3);overflow:hidden;flex-shrink:0}
+.card-img img{width:100%;height:100%;object-fit:contain;display:block}
+.card-body{padding:7px 8px;flex:1;display:flex;flex-direction:column;min-height:0}
+.card-code{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--accent2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.card-cat{display:inline-block;padding:1px 6px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
+.card-price{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--green)}
+.card-weight{font-size:9.5px;color:var(--text3);font-family:var(--mono)}
+.card-select{position:absolute;top:5px;right:5px;width:20px;height:20px;background:#fff;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;box-shadow:var(--shadow-sm)}
 .product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff}
 /* List view card */
-.product-grid.list-view .product-card{display:flex;gap:0}
+.product-grid.list-view .product-card{flex-direction:row}
 .product-grid.list-view .card-img{width:80px;height:80px;aspect-ratio:unset;flex-shrink:0;border-radius:0}
-.product-grid.list-view .card-body{display:flex;flex-direction:column;justify-content:center}
+.product-grid.list-view .card-body{padding:10px 11px;justify-content:center}
 
 /* ── BOTTOM BAR ── */
 .bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:8px 14px calc(var(--safe-bottom) + 8px);display:flex;gap:8px;box-shadow:0 -4px 20px rgba(0,0,0,.08);z-index:100}
@@ -243,6 +243,59 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .client-mode-banner{background:linear-gradient(135deg,#92400e,#c2410c);padding:8px 16px;text-align:center;font-size:12px;font-weight:700;color:#fff;letter-spacing:.04em;flex-shrink:0}
+
+/* ── PP PIN MODAL ── */
+.pp-modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:center;justify-content:center;padding:20px}
+.pp-modal-backdrop.open{display:flex}
+.pp-modal{background:#fff;border-radius:20px;padding:28px 24px;width:100%;max-width:340px;box-shadow:var(--shadow-lg);text-align:center}
+.pp-modal-title{font-size:17px;font-weight:700;color:var(--accent);margin-bottom:4px}
+.pp-modal-sub{font-size:12px;color:var(--text3);margin-bottom:18px}
+.pp-pin-input{width:100%;height:48px;border:1.5px solid var(--border);border-radius:var(--r-sm);padding:0 16px;font-family:var(--mono);font-size:20px;text-align:center;letter-spacing:6px;outline:none;background:var(--bg);-webkit-appearance:none}
+.pp-pin-input:focus{border-color:var(--accent2)}
+.pp-pin-err{font-size:12px;color:var(--red);margin-top:8px;min-height:18px}
+.pp-pin-actions{display:flex;gap:10px;margin-top:16px}
+.pp-pin-actions button{flex:1;height:44px;border:none;border-radius:var(--r-sm);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font)}
+
+/* ── DRAWING PDF BUTTON ── */
+.drawing-btn{display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border-radius:var(--r-sm);text-decoration:none;color:var(--text);cursor:pointer;border:none;width:100%;font-family:var(--font);transition:background .15s}
+.drawing-btn:active{background:var(--border)}
+.drawing-share-row{display:flex;gap:8px;margin-top:8px}
+.drawing-share-btn{flex:1;height:38px;border:1.5px solid var(--border);border-radius:8px;background:var(--bg);font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2);transition:all .15s}
+.drawing-share-btn:active{background:var(--surface2)}
+.drawing-share-btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+
+/* ── QUICK QUOTE SHEET ── */
+.quote-sheet{position:fixed;bottom:0;left:0;right:0;background:#fff;border-radius:24px 24px 0 0;z-index:450;padding-bottom:calc(var(--safe-bottom)+16px);transform:translateY(100%);transition:transform .35s cubic-bezier(.32,1.1,.64,1);max-height:92vh;overflow-y:auto}
+.quote-sheet.open{transform:translateY(0)}
+.quote-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.quote-title{font-size:15px;font-weight:700;color:var(--text);flex:1}
+.quote-close{width:32px;height:32px;background:var(--surface2);border:none;border-radius:50%;font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.quote-body{padding:16px 20px}
+.quote-row{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.quote-label{font-size:12px;font-weight:700;color:var(--text2);min-width:110px}
+.quote-input{flex:1;height:40px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:15px;font-family:var(--mono);text-align:right;outline:none;background:var(--bg);-webkit-appearance:none;transition:border .15s}
+.quote-input:focus{border-color:var(--accent2);background:#fff}
+.quote-input.readonly{background:var(--surface2);color:var(--text2);pointer-events:none}
+.quote-unit{font-size:12px;color:var(--text3);font-weight:600;min-width:28px}
+.quote-divider{height:1px;background:var(--border);margin:10px 0}
+.quote-total-row{display:flex;align-items:center;justify-content:space-between;padding:12px 0}
+.quote-total-label{font-size:13px;font-weight:700;color:var(--text2)}
+.quote-total-val{font-size:22px;font-weight:800;color:var(--accent);font-family:var(--mono)}
+.quote-margin-indicator{font-size:11px;padding:3px 10px;border-radius:var(--r-full);font-weight:700}
+.quote-margin-indicator.good{background:var(--green-bg);color:var(--green)}
+.quote-margin-indicator.warn{background:#fef3c7;color:#92400e}
+.quote-margin-indicator.bad{background:var(--red-bg);color:var(--red)}
+.quote-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+.quote-action-btn{height:48px;border:none;border-radius:10px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);transition:all .15s}
+.quote-action-btn:active{transform:scale(.96)}
+.quote-action-btn.secondary{background:var(--surface2);color:var(--text)}
+.quote-action-btn.primary{background:var(--accent);color:#fff}
+.quote-action-btn.green{background:var(--green);color:#fff;grid-column:1/-1}
+.freight-toggle{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;color:var(--text2);margin-bottom:10px}
+.freight-toggle input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent2)}
+.target-section{background:var(--accent-light);border-radius:var(--r-sm);padding:12px;margin-bottom:12px}
+.target-section-title{font-size:11px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.target-margin-badge{display:inline-block;padding:4px 12px;border-radius:var(--r-full);font-size:13px;font-weight:800;font-family:var(--mono)}
 </style>
 </head>
 <body>
@@ -370,8 +423,31 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
   </div>
 </div>
 
-<!-- FILTER SHEET -->
-<div class="sheet-backdrop" id="filter-backdrop" onclick="closeFilterSheet()"></div>
+<!-- PP PIN MODAL -->
+<div class="pp-modal-backdrop" id="pp-modal-backdrop">
+  <div class="pp-modal">
+    <div style="font-size:32px;margin-bottom:10px">🔐</div>
+    <div class="pp-modal-title">PP Access</div>
+    <div class="pp-modal-sub">Enter your purchase price PIN to view cost data</div>
+    <input type="password" class="pp-pin-input" id="pp-pin-input" placeholder="••••" maxlength="8" inputmode="numeric" onkeydown="if(event.key==='Enter')checkPpPin()">
+    <div class="pp-pin-err" id="pp-pin-err"></div>
+    <div class="pp-pin-actions">
+      <button onclick="closePpModal()" style="background:var(--surface2);color:var(--text2)">Cancel</button>
+      <button onclick="checkPpPin()" style="background:var(--accent);color:#fff">Unlock</button>
+    </div>
+  </div>
+</div>
+
+<!-- QUICK QUOTE SHEET BACKDROP -->
+<div class="sheet-backdrop" id="quote-backdrop" onclick="closeQuoteSheet()"></div>
+<!-- QUICK QUOTE SHEET -->
+<div class="quote-sheet" id="quote-sheet">
+  <div class="quote-header">
+    <div class="quote-title" id="quote-title">⚡ Quick Quote</div>
+    <button class="quote-close" onclick="closeQuoteSheet()">✕</button>
+  </div>
+  <div class="quote-body" id="quote-body"></div>
+</div>
 <div class="filter-sheet" id="filter-sheet">
   <div class="sheet-handle"></div>
   <div class="sheet-title">🔍 Filter Products</div>
@@ -480,7 +556,7 @@ const CURRENCIES = ['EUR','USD','GBP','PLN','SEK','DKK','NOK','CHF','AUD','CAD']
 const CUR_SYM = {EUR:'€',USD:'$',GBP:'£',PLN:'zł',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',AUD:'A$',CAD:'C$'};
 
 let state = {
-  items: [], settings: {}, isViewer: false,
+  items: [], settings: {}, isViewer: false, isPpUnlocked: false,
   searchQ: '', filters: {},
   selected: new Set(),
   gridView: true, // true=grid, false=list
@@ -685,6 +761,8 @@ function getFiltered(){
   const q = state.searchQ.toLowerCase().trim();
   const f = state.filters;
   return state.items.filter(item => {
+    // selected-only tab
+    if(f._selOnly && !state.selected.has(item.id)) return false;
     // category filter
     if(f.categories?.length && !f.categories.includes(item.category)) return false;
     // material filter
@@ -709,7 +787,6 @@ function getFiltered(){
     return true;
   });
 }
-
 function render(){
   const grid    = $('product-grid');
   const loading = $('loading-state');
@@ -962,17 +1039,26 @@ ${galleryHTML}
 
   ${item.pdfAttachment ? `<div class="detail-section">
     <div class="detail-section-title">Technical Drawing</div>
-    <a href="${item.pdfAttachment}" target="_blank" style="display:flex;align-items:center;gap:12px;padding:14px;background:var(--surface2);border-radius:var(--r-sm);text-decoration:none;color:var(--text)">
+    <button class="drawing-btn" onclick="openDrawingPdf('${item.pdfAttachment.replace(/'/g,"\\'")}')">
       <span style="font-size:28px">📐</span>
-      <div><div style="font-weight:700;font-size:14px">View Drawing PDF</div><div style="font-size:12px;color:var(--text3)">Tap to open</div></div>
-    </a>
+      <div style="text-align:left"><div style="font-weight:700;font-size:14px">View Drawing PDF</div><div style="font-size:12px;color:var(--text3)">Tap to open</div></div>
+      <span style="margin-left:auto;font-size:18px">→</span>
+    </button>
+    <div class="drawing-share-row">
+      <button class="drawing-share-btn" onclick="shareDrawingPdf('${item.pdfAttachment.replace(/'/g,"\\'")}','${esc(item.item||item.type||'Drawing')}')">↑ Share Drawing</button>
+      <button class="drawing-share-btn primary" onclick="downloadDrawingPdf('${item.pdfAttachment.replace(/'/g,"\\'")}','${esc(item.item||'Drawing')}')">⬇ Download</button>
+    </div>
   </div>` : ''}
 
   <div class="action-btns">
     <button class="action-btn secondary" onclick="toggleSel(${item.id});closeDetail()">
       ${state.selected.has(item.id) ? '✓ Selected' : '+ Select'}
     </button>
-    <button class="action-btn primary" onclick="shareSingleProduct(${item.id})">↑ Share</button>
+    <button class="action-btn primary" onclick="openQuoteSheet(${item.id})">⚡ Quote</button>
+  </div>
+  <div class="action-btns" style="margin-top:8px">
+    <button class="action-btn secondary" onclick="shareCurrentProduct()">↑ Share</button>
+    ${!state.isViewer ? `<button class="action-btn secondary" onclick="togglePpView(${item.id})" id="pp-btn-${item.id}" style="background:var(--amber-bg);color:var(--amber);border:1px solid #fcd34d">🔐 View PP</button>` : ''}
   </div>
 </div>`;
 }
@@ -1023,16 +1109,20 @@ function setTab(tab){
   state.tab = tab;
   document.querySelectorAll('.bottom-tab').forEach(b=>b.classList.remove('active'));
   $('tab-'+tab)?.classList.add('active');
-  if(tab==='catalogue') render();
-  if(tab==='selected'){
-    if(!state.selected.size){ notify('No items selected yet'); return; }
-    // Show only selected items
-    const prev = state.filters._selOnly;
+
+  if(tab === 'catalogue'){
+    state.filters._selOnly = false;
+    render();
+  }
+  else if(tab === 'selected'){
+    if(!state.selected.size){ notify('No items selected yet — tap ☑ on any product'); $('tab-catalogue').classList.add('active'); state.tab='catalogue'; return; }
     state.filters._selOnly = true;
     render();
-    state.filters._selOnly = false;
   }
-  if(tab==='pricelist') openPriceCalc();
+  else if(tab === 'pricelist'){
+    if(!state.selected.size){ notify('Select items first to build a price list'); $('tab-catalogue').classList.add('active'); state.tab='catalogue'; return; }
+    renderPriceListTab();
+  }
 }
 
 // ── PRICE CALCULATOR ─────────────────────────────────────────────────────────
@@ -1057,14 +1147,32 @@ function setPriceMode(mode, btn){
 
 function renderCalcBody(){
   const mode = state.priceMode;
+  const showFreight = mode==='cif'||mode==='cfr';
   $('calc-body').innerHTML = `
 <div class="calc-row">
   <div class="calc-label">Extra Margin %</div>
   <input class="calc-input" type="number" id="calc-margin" value="${state.calcMargin}" min="0" max="200" step="0.5" oninput="calcUpdate()">
 </div>
-${(mode==='cif'||mode==='cfr') ? `<div class="calc-row">
-  <div class="calc-label">Sea Freight (€/kg)</div>
-  <input class="calc-input" type="number" id="calc-freight" value="${state.calcFreight}" min="0" step="0.01" oninput="calcUpdate()">
+${showFreight ? `
+<div style="padding:4px 0 6px">
+  <label class="freight-toggle">
+    <input type="checkbox" id="freight-auto" onchange="toggleFreightMode()"> Calculate freight from container total
+  </label>
+  <div id="freight-direct-row" class="calc-row">
+    <div class="calc-label">Sea Freight (€/kg)</div>
+    <input class="calc-input" type="number" id="calc-freight" value="${state.calcFreight}" min="0" step="0.001" oninput="calcUpdate()">
+  </div>
+  <div id="freight-auto-rows" style="display:none">
+    <div class="calc-row">
+      <div class="calc-label">Total Freight (€)</div>
+      <input class="calc-input" type="number" id="calc-freight-total" value="0" min="0" step="1" oninput="autoFreightCalc()">
+    </div>
+    <div class="calc-row">
+      <div class="calc-label">Container Cap. (kg)</div>
+      <input class="calc-input" type="number" id="calc-container-cap" value="21000" min="1" step="100" oninput="autoFreightCalc()">
+    </div>
+    <div id="freight-per-kg-display" style="padding:4px 0 2px;font-size:12px;color:var(--accent2);font-weight:700;font-family:var(--mono)">→ €/kg: 0.0000</div>
+  </div>
 </div>` : ''}
 ${mode==='cif' ? `<div class="calc-row">
   <div class="calc-label">Insurance %</div>
@@ -1074,12 +1182,33 @@ ${mode==='cif' ? `<div class="calc-row">
   calcUpdate();
 }
 
+function toggleFreightMode(){
+  const auto = $('freight-auto')?.checked;
+  const directRow = $('freight-direct-row');
+  const autoRows = $('freight-auto-rows');
+  if(directRow) directRow.style.display = auto ? 'none' : 'flex';
+  if(autoRows) autoRows.style.display = auto ? 'block' : 'none';
+  if(auto) autoFreightCalc();
+  else calcUpdate();
+}
+
+function autoFreightCalc(){
+  const total = parseFloat($('calc-freight-total')?.value)||0;
+  const cap   = parseFloat($('calc-container-cap')?.value)||1;
+  const perKg = total / cap;
+  state.calcFreight = perKg;
+  const disp = $('freight-per-kg-display');
+  if(disp) disp.textContent = `→ Per kg freight: €${perKg.toFixed(4)}`;
+  calcUpdate();
+}
+
 function calcUpdate(){
   const margin = parseFloat($('calc-margin')?.value)||0;
-  const freight = parseFloat($('calc-freight')?.value)||0;
+  const autoMode = $('freight-auto')?.checked;
+  const freight = autoMode ? state.calcFreight : (parseFloat($('calc-freight')?.value)||0);
   const insure  = parseFloat($('calc-insure')?.value)||0;
   state.calcMargin = margin;
-  state.calcFreight = freight;
+  if(!autoMode) state.calcFreight = freight;
   const items = state.items.filter(r=>state.selected.has(r.id));
   const totalFOB = items.reduce((s,r)=>s+calcFOB(r.pp,r.marg,r.fob,r.exrate)*(r.qty||1),0);
   const totalWt  = items.reduce((s,r)=>s+(parseFloat(r.weight)||0)*(r.qty||1),0);
@@ -1091,12 +1220,131 @@ function calcUpdate(){
   $('price-result').innerHTML = `
 <div class="price-result-lbl">${mode} Total Price</div>
 <div class="price-result-val">€${finalTotal.toFixed(2)}</div>
-<div class="price-result-sub">${items.length} items · ${mode}${margin>0?' +'+margin+'% margin':''}</div>`;
+<div class="price-result-sub">${items.length} items · ${mode}${margin>0?' +'+margin+'% margin':''}${freight>0?' +€'+freight.toFixed(4)+'/kg freight':''}</div>`;
 }
 
 function applyPriceAndGenerate(){
+  // FIX 8: pass calcMargin and calcFreight directly — do NOT read from pdf-margin-pct
+  const margin = state.calcMargin || 0;
+  const freight = state.calcFreight || 0;
   closePriceCalc();
-  generatePDF();
+  const items = state.selected.size ? state.items.filter(r=>state.selected.has(r.id)) : getFiltered();
+  if(!items.length){ notify('No items to generate PDF','error'); return; }
+  notify('Generating PDF…');
+  setTimeout(() => {
+    try{
+      let doc;
+      const showPrice = !state.isViewer;
+      if(state.pdfStyle==='brochure') doc = buildBrochurePDF(items, showPrice, margin, freight);
+      else if(state.pdfStyle==='photo-price') doc = buildPhotoGridPDF(items, showPrice, margin, freight);
+      else if(state.pdfStyle==='photo-only') doc = buildPhotoOnlyPDF(items);
+      else doc = buildPriceListPDF(items, showPrice, margin, freight);
+      const blob = doc.output('blob');
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement('a');
+      a.href = url; a.download = 'JCBL_Quote_'+today()+'.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      notify('PDF downloaded!','success');
+    }catch(e){ notify('PDF error: '+e.message,'error'); }
+  }, 200);
+}
+
+// ── PRICE LIST TAB VIEW (Fix 7) ───────────────────────────────────────────────
+function renderPriceListTab(){
+  const selItems = state.items.filter(r=>state.selected.has(r.id));
+  const grid = $('product-grid');
+  const loading = $('loading-state');
+  const empty = $('empty-state');
+  loading.style.display='none';
+  empty.style.display='none';
+  grid.style.display='block';
+  const sym = '€';
+  const totalFOB = selItems.reduce((s,r)=>s+calcFOB(r.pp,r.marg,r.fob,r.exrate),0);
+  const totalWt  = selItems.reduce((s,r)=>s+(parseFloat(r.weight)||0),0);
+
+  grid.innerHTML = `
+<div style="background:#fff;border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:var(--shadow-sm)">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div style="font-size:15px;font-weight:700;color:var(--text)">💰 Price List</div>
+    <div style="font-size:11px;color:var(--text3)">${selItems.length} items · ${totalWt.toFixed(2)} kg total</div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+    <div style="flex:1;min-width:120px;padding:10px;background:var(--accent-light);border-radius:8px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--accent2);text-transform:uppercase;margin-bottom:4px">FOB Total</div>
+      <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:var(--mono)">${sym}${totalFOB.toFixed(2)}</div>
+    </div>
+    <div style="flex:1;min-width:120px;padding:10px;background:var(--green-bg);border-radius:8px;text-align:center">
+      <div style="font-size:10px;font-weight:700;color:var(--green);text-transform:uppercase;margin-bottom:4px">Total Weight</div>
+      <div style="font-size:16px;font-weight:800;color:var(--green);font-family:var(--mono)">${totalWt.toFixed(2)} kg</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;background:var(--surface2);padding:10px;border-radius:8px">
+    <span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Extra Margin %</span>
+    <input type="number" id="pltab-margin" value="0" min="0" max="200" step="0.5" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows()">
+    <span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;margin-left:8px">Freight €/kg</span>
+    <input type="number" id="pltab-freight" value="0" min="0" step="0.01" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows()">
+  </div>
+  <div id="pltab-rows"></div>
+  <div id="pltab-summary"></div>
+  <div style="display:flex;gap:8px;margin-top:14px">
+    <button onclick="setTab('catalogue')" style="flex:1;height:42px;background:var(--surface2);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2)">← Catalogue</button>
+    <button onclick="generatePriceListPdf()" style="flex:2;height:42px;background:var(--accent);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);color:#fff">📄 Generate PDF</button>
+  </div>
+</div>`;
+  renderPriceListRows();
+}
+
+function renderPriceListRows(){
+  const selItems = state.items.filter(r=>state.selected.has(r.id));
+  const margin = parseFloat($('pltab-margin')?.value)||0;
+  const freight = parseFloat($('pltab-freight')?.value)||0;
+  const sym = '€';
+  let grandTotal = 0;
+  const rows = selItems.map(item => {
+    const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+    const final = getPrice(item, margin, freight);
+    grandTotal += final;
+    return `<div style="display:flex;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="width:36px;height:36px;background:var(--surface2);border-radius:6px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden">
+        ${item.photo ? `<img src="${item.photo}" style="width:100%;height:100%;object-fit:contain">` : '📦'}
+      </div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:11px;font-family:var(--mono);color:var(--accent2);font-weight:600">${esc(item.item||'')}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(item.type||item.item||'—')}</div>
+        <div style="font-size:10px;color:var(--text3)">${item.weight||0} kg · FOB ${sym}${fob.toFixed(4)}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${sym}${final.toFixed(4)}</div>
+        ${margin>0||freight>0?`<div style="font-size:9px;color:var(--text3)">${margin>0?'+'+margin+'%':''}${freight>0?' +frt':''}</div>`:''}
+      </div>
+    </div>`;
+  }).join('');
+  const rowsEl = $('pltab-rows'); if(rowsEl) rowsEl.innerHTML = rows;
+  const sumEl = $('pltab-summary');
+  if(sumEl) sumEl.innerHTML = `<div style="display:flex;justify-content:space-between;padding:12px 0;margin-top:4px;border-top:2px solid var(--border)">
+    <div style="font-size:13px;font-weight:700;color:var(--text2)">Grand Total</div>
+    <div style="font-size:16px;font-weight:800;color:var(--accent);font-family:var(--mono)">${sym}${grandTotal.toFixed(2)}</div>
+  </div>`;
+}
+
+function generatePriceListPdf(){
+  const margin = parseFloat($('pltab-margin')?.value)||0;
+  const freight = parseFloat($('pltab-freight')?.value)||0;
+  const items = state.items.filter(r=>state.selected.has(r.id));
+  if(!items.length){ notify('No items selected','error'); return; }
+  notify('Generating PDF…');
+  setTimeout(()=>{
+    try{
+      const doc = buildPriceListPDF(items, !state.isViewer, margin, freight);
+      const blob = doc.output('blob');
+      const url  = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='JCBL_PriceList_'+today()+'.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      notify('PDF downloaded!','success');
+    }catch(e){ notify('PDF error: '+e.message,'error'); }
+  }, 200);
 }
 
 // ── PDF STYLE SHEET ──────────────────────────────────────────────────────────
@@ -1298,18 +1546,90 @@ function buildPriceListPDF(items, showPrice, extraMargin, freight){
   return doc;
 }
 
-// ── SHARE ────────────────────────────────────────────────────────────────────
+// ── DRAWING PDF (Fix 2) ───────────────────────────────────────────────────────
+function openDrawingPdf(url){
+  try {
+    // Works for both base64 data URLs and http URLs
+    if(url.startsWith('data:')){
+      const byteStr = atob(url.split(',')[1]);
+      const ab = new ArrayBuffer(byteStr.length);
+      const ia = new Uint8Array(ab);
+      for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+      const blob = new Blob([ab],{type:'application/pdf'});
+      const blobUrl = URL.createObjectURL(blob);
+      window.open(blobUrl,'_blank');
+      setTimeout(()=>URL.revokeObjectURL(blobUrl),30000);
+    } else {
+      window.open(url,'_blank');
+    }
+  } catch(e){ notify('Cannot open PDF: '+e.message,'error'); }
+}
+
+async function shareDrawingPdf(url, name){
+  try {
+    let file;
+    if(url.startsWith('data:')){
+      const byteStr = atob(url.split(',')[1]);
+      const ab = new ArrayBuffer(byteStr.length);
+      const ia = new Uint8Array(ab);
+      for(let i=0;i<byteStr.length;i++) ia[i]=byteStr.charCodeAt(i);
+      const blob = new Blob([ab],{type:'application/pdf'});
+      file = new File([blob], (name||'Drawing')+'.pdf', {type:'application/pdf'});
+    }
+    if(navigator.canShare && file && navigator.canShare({files:[file]})){
+      await navigator.share({files:[file], title:name+' Drawing'});
+    } else if(navigator.share){
+      await navigator.share({title:name+' Technical Drawing', text:'Technical drawing for '+name});
+    } else {
+      notify('Sharing not supported — use Download instead');
+    }
+  } catch(e){ if(e.name!=='AbortError') notify('Share failed','error'); }
+}
+
+function downloadDrawingPdf(url, name){
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (name||'Drawing')+'.pdf';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+// ── SHARE (Fix 3 — rich share with full specs) ────────────────────────────────
 function shareCurrentProduct(){
   const item = state.currentItem;
   if(!item) return;
   const fob = calcFOB(item.pp,item.marg,item.fob,item.exrate);
-  const text = `*${item.type||item.item}*\nCode: ${item.item}${item.refCode?' | Ref: '+item.refCode:''}\nCategory: ${item.category}\nMaterial: ${item.material||'—'}\nWeight: ${item.weight||'—'} kg${!state.isViewer?'\nFOB Price: €'+fob.toFixed(4):''}`;
+  const sym = curSym(item.currency||'EUR');
+  const specsText = Object.entries(item.specs||{}).map(([k,v])=>`  • ${k}: ${v}`).join('\n');
+  const c = state.settings?.company||{};
+  const companyLine = c.name ? `\n_${c.name}${c.email?' · '+c.email:''}_` : '';
+
+  const text = [
+    `*${item.type||item.item||'Product'}*`,
+    ``,
+    `📋 *Product Code:* ${item.item||'—'}`,
+    item.refCode ? `🔖 *Ref Code:* ${item.refCode}` : '',
+    `📦 *Category:* ${item.category||'—'}`,
+    `🔩 *Material:* ${item.material||'—'}`,
+    item.weight ? `⚖️ *Weight:* ${item.weight} kg` : '',
+    item.qty ? `📊 *Std. Qty:* ${item.qty}` : '',
+    specsText ? `\n*Specifications:*\n${specsText}` : '',
+    item.remarks ? `\n📝 ${item.remarks}` : '',
+    (!state.isViewer && fob>0) ? `\n💰 *FOB Price:* ${sym}${fob.toFixed(4)} per unit` : '',
+    companyLine,
+  ].filter(Boolean).join('\n');
+
   if(navigator.share){
-    navigator.share({title:item.type||item.item,text}).catch(()=>copyText(text));
+    navigator.share({title:item.type||item.item, text}).catch(e=>{
+      if(e.name!=='AbortError') fallbackShareWhatsApp(text);
+    });
   } else {
-    const url = 'https://wa.me/?text='+encodeURIComponent(text);
-    window.open(url,'_blank');
+    fallbackShareWhatsApp(text);
   }
+}
+
+function fallbackShareWhatsApp(text){
+  const url = 'https://wa.me/?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
 }
 
 function shareSingleProduct(id){
@@ -1317,6 +1637,256 @@ function shareSingleProduct(id){
   if(!item) return;
   state.currentItem = item;
   shareCurrentProduct();
+}
+
+// ── PP PIN (Fix 5) ────────────────────────────────────────────────────────────
+function togglePpView(itemId){
+  if(state.isPpUnlocked){
+    showPpInDetail(itemId);
+    return;
+  }
+  // Show PIN modal
+  $('pp-modal-backdrop').classList.add('open');
+  $('pp-pin-input').value='';
+  $('pp-pin-err').textContent='';
+  setTimeout(()=>$('pp-pin-input')?.focus(),300);
+  state._ppPendingItemId = itemId;
+}
+
+function closePpModal(){
+  $('pp-modal-backdrop').classList.remove('open');
+  state._ppPendingItemId = null;
+}
+
+function checkPpPin(){
+  const entered = $('pp-pin-input').value;
+  const correct = state.settings?.system?.ppPassword || state.settings?.system?.viewerPassword || '';
+  const errEl = $('pp-pin-err');
+  // If no PP password set, fall back to admin-only (no viewer access)
+  if(!correct){ errEl.textContent = 'No PP PIN set. Set ppPassword in FOB Manager Settings.'; return; }
+  if(entered === correct){
+    state.isPpUnlocked = true;
+    closePpModal();
+    notify('PP access unlocked 🔓','success');
+    if(state._ppPendingItemId) showPpInDetail(state._ppPendingItemId);
+  } else {
+    errEl.textContent = 'Incorrect PIN. Try again.';
+    $('pp-pin-input').value='';
+    $('pp-pin-input').focus();
+  }
+}
+
+function showPpInDetail(itemId){
+  const item = state.items.find(r=>r.id===itemId);
+  if(!item) return;
+  const ppEl = document.getElementById('pp-reveal-'+itemId);
+  if(ppEl){ ppEl.remove(); return; } // toggle off
+  const btn = document.getElementById('pp-btn-'+itemId);
+  if(!btn) return;
+  const c = state.settings?.company||{};
+  const sym = curSym(item.currency||'EUR');
+  const ppFob = calcFOB(item.pp,item.marg,item.fob,item.exrate);
+  const reveal = document.createElement('div');
+  reveal.id = 'pp-reveal-'+itemId;
+  reveal.style.cssText = 'background:var(--amber-bg);border:1px solid #fcd34d;border-radius:10px;padding:12px;margin:4px 0 8px;font-size:12px';
+  reveal.innerHTML = `
+    <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;margin-bottom:8px">🔐 Purchase Price (Confidential)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+      <div><div style="font-size:10px;color:var(--text3)">PP (INR)</div><div style="font-weight:700;font-family:var(--mono)">₹${(item.pp||0).toFixed(2)}</div></div>
+      <div><div style="font-size:10px;color:var(--text3)">FOB Margin</div><div style="font-weight:700;font-family:var(--mono)">${(item.marg||0)}% + ${(item.fob||0)}%</div></div>
+      <div><div style="font-size:10px;color:var(--text3)">Exchange Rate</div><div style="font-weight:700;font-family:var(--mono)">₹${(item.exrate||0)} / ${item.currency||'EUR'}</div></div>
+      <div><div style="font-size:10px;color:var(--text3)">FOB ${item.currency||'EUR'}</div><div style="font-weight:700;font-family:var(--mono);color:var(--green)">${sym}${ppFob.toFixed(4)}</div></div>
+    </div>`;
+  btn.parentNode.insertBefore(reveal, btn);
+  btn.textContent = '🔒 Hide PP';
+}
+
+// ── QUICK QUOTE SHEET (new feature) ───────────────────────────────────────────
+function openQuoteSheet(itemId){
+  const item = state.items.find(r=>r.id===itemId);
+  if(!item){ notify('Product not found','error'); return; }
+  state._quoteItem = item;
+  $('quote-title').textContent = '⚡ Quick Quote — '+( item.item||'');
+  renderQuoteBody(item);
+  $('quote-sheet').classList.add('open');
+  $('quote-backdrop').classList.add('open');
+}
+
+function closeQuoteSheet(){
+  $('quote-sheet').classList.remove('open');
+  $('quote-backdrop').classList.remove('open');
+}
+
+function renderQuoteBody(item){
+  const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const sym = curSym(item.currency||'EUR');
+  $('quote-body').innerHTML = `
+<div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">Base FOB: ${sym}${fob.toFixed(4)} · Weight: ${item.weight||0} kg · ${item.material||'—'}</div>
+
+<div class="quote-row">
+  <span class="quote-label">Your Margin</span>
+  <input class="quote-input" type="number" id="qq-margin" value="15" min="0" max="200" step="0.5" oninput="updateQuote()">
+  <span class="quote-unit">%</span>
+</div>
+
+<div class="freight-toggle">
+  <input type="checkbox" id="qq-freight-on" onchange="updateQuote()">
+  <label for="qq-freight-on">Add sea freight</label>
+</div>
+<div id="qq-freight-section" style="display:none">
+  <div class="quote-row">
+    <span class="quote-label">Freight €/kg</span>
+    <input class="quote-input" type="number" id="qq-freight-kg" value="0" min="0" step="0.001" oninput="updateQuote()">
+    <span class="quote-unit">€/kg</span>
+  </div>
+  <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
+    Or: <input type="number" id="qq-freight-total" placeholder="Total freight €" style="width:120px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> ÷
+    <input type="number" id="qq-container-cap" placeholder="Container kg" value="21000" style="width:100px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> = per kg
+  </div>
+</div>
+
+<div class="quote-divider"></div>
+<div class="quote-total-row">
+  <span class="quote-total-label">Your Quote Price</span>
+  <span class="quote-total-val" id="qq-final-price">${sym}${fob.toFixed(4)}</span>
+</div>
+<div id="qq-margin-badge" style="margin-bottom:12px"></div>
+
+<div class="target-section">
+  <div class="target-section-title">🎯 Client Target Price Analyser</div>
+  <div class="quote-row" style="margin-bottom:4px">
+    <span class="quote-label">Client offers</span>
+    <input class="quote-input" type="number" id="qq-target" placeholder="0.00" step="0.0001" oninput="analyseTarget()">
+    <span class="quote-unit">${sym}</span>
+  </div>
+  <div id="qq-target-result" style="font-size:12px;color:var(--text3);margin-top:4px">Enter client's target price to see your effective margin</div>
+</div>
+
+<div class="quote-actions">
+  <button class="quote-action-btn secondary" onclick="copyQuoteText()">📋 Copy Text</button>
+  <button class="quote-action-btn primary" onclick="shareQuoteWhatsApp()">↑ WhatsApp</button>
+  <button class="quote-action-btn green" onclick="generateQuotePdf()">📄 Generate Quote PDF</button>
+</div>`;
+  // Attach freight toggle
+  $('qq-freight-on').addEventListener('change', function(){
+    $('qq-freight-section').style.display = this.checked ? 'block' : 'none';
+    updateQuote();
+  });
+  updateQuote();
+}
+
+function autoQqFreight(){
+  const total = parseFloat($('qq-freight-total')?.value)||0;
+  const cap   = parseFloat($('qq-container-cap')?.value)||1;
+  const perKg = total/cap;
+  if($('qq-freight-kg')) $('qq-freight-kg').value = perKg.toFixed(4);
+  updateQuote();
+}
+
+function updateQuote(){
+  const item = state._quoteItem;
+  if(!item) return;
+  const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const margin = parseFloat($('qq-margin')?.value)||0;
+  const freightOn = $('qq-freight-on')?.checked;
+  const freightKg = freightOn ? (parseFloat($('qq-freight-kg')?.value)||0) : 0;
+  const sym = curSym(item.currency||'EUR');
+  const withMargin = fob * (1 + margin/100);
+  const freightPer = freightKg * (parseFloat(item.weight)||0);
+  const final = withMargin + freightPer;
+  const el = $('qq-final-price');
+  if(el) el.textContent = sym+final.toFixed(4);
+  // Margin badge
+  const badge = $('qq-margin-badge');
+  if(badge){
+    const cls = margin >= 15 ? 'good' : margin >= 8 ? 'warn' : 'bad';
+    badge.innerHTML = `<span class="quote-margin-indicator ${cls}">Margin: ${margin.toFixed(1)}%${freightOn&&freightKg>0?' + freight':''}</span>`;
+  }
+  state._qqFinal = final;
+  state._qqMargin = margin;
+  state._qqFreight = freightKg;
+  analyseTarget();
+}
+
+function analyseTarget(){
+  const item = state._quoteItem;
+  if(!item) return;
+  const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
+  const freightOn = $('qq-freight-on')?.checked;
+  const freightKg = freightOn ? (parseFloat($('qq-freight-kg')?.value)||0) : 0;
+  const freightPer = freightKg * (parseFloat(item.weight)||0);
+  const target = parseFloat($('qq-target')?.value)||0;
+  const el = $('qq-target-result');
+  if(!el) return;
+  if(!target){ el.innerHTML = '<span style="color:var(--text3)">Enter client\'s target price to see your effective margin</span>'; return; }
+  const effectiveMargin = ((target - freightPer) / fob - 1) * 100;
+  const cls = effectiveMargin >= 15 ? 'good' : effectiveMargin >= 8 ? 'warn' : 'bad';
+  const sym = curSym(item.currency||'EUR');
+  el.innerHTML = `At ${sym}${target.toFixed(4)}: <span class="quote-margin-indicator ${cls}" style="display:inline-block">${effectiveMargin.toFixed(1)}% margin</span>
+    ${effectiveMargin < 0 ? '<br><span style="color:var(--red);font-weight:700;font-size:11px">⚠️ Below cost — decline or negotiate</span>' :
+      effectiveMargin < 8 ? '<br><span style="color:var(--amber);font-weight:700;font-size:11px">⚠️ Tight margin — check overhead</span>' :
+      '<br><span style="color:var(--green);font-weight:700;font-size:11px">✓ Acceptable — can proceed</span>'}`;
+}
+
+function copyQuoteText(){
+  const item = state._quoteItem;
+  if(!item) return;
+  const sym = curSym(item.currency||'EUR');
+  const final = state._qqFinal || 0;
+  const text = buildQuoteText(item, final, sym);
+  navigator.clipboard?.writeText(text).then(()=>notify('Copied!','success')).catch(()=>notify('Copy failed','error'));
+}
+
+function shareQuoteWhatsApp(){
+  const item = state._quoteItem;
+  if(!item) return;
+  const sym = curSym(item.currency||'EUR');
+  const final = state._qqFinal || 0;
+  const text = buildQuoteText(item, final, sym);
+  const url = 'https://wa.me/?text='+encodeURIComponent(text);
+  window.open(url,'_blank');
+}
+
+function buildQuoteText(item, price, sym){
+  const margin = state._qqMargin||0;
+  const freightKg = state._qqFreight||0;
+  const specsText = Object.entries(item.specs||{}).map(([k,v])=>`  • ${k}: ${v}`).join('\n');
+  const c = state.settings?.company||{};
+  return [
+    `*QUOTATION — ${item.type||item.item}*`,
+    ``,
+    `📋 *Code:* ${item.item||'—'}${item.refCode?' | Ref: '+item.refCode:''}`,
+    `📦 *Category:* ${item.category||'—'}`,
+    `🔩 *Material:* ${item.material||'—'}`,
+    item.weight ? `⚖️ *Weight:* ${item.weight} kg` : '',
+    specsText ? `\n*Specs:*\n${specsText}` : '',
+    ``,
+    `💰 *Unit Price: ${sym}${price.toFixed(4)}*`,
+    (margin>0||freightKg>0) ? `_(${margin>0?'+'+margin+'% margin':''}${freightKg>0?' +freight':''}${state.priceMode?' '+state.priceMode.toUpperCase():''})_` : '',
+    ``,
+    c.name ? `_${c.name}${c.email?' · '+c.email:''}_` : '',
+    `_Valid for 7 days · Subject to availability_`,
+  ].filter(s=>s!==undefined && s!=='').join('\n');
+}
+
+function generateQuotePdf(){
+  const item = state._quoteItem;
+  if(!item) return;
+  const margin = state._qqMargin||0;
+  const freightKg = state._qqFreight||0;
+  closeQuoteSheet();
+  notify('Generating quote PDF…');
+  setTimeout(()=>{
+    try{
+      const doc = buildBrochurePDF([item], true, margin, freightKg);
+      const blob = doc.output('blob');
+      const url  = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download='Quote_'+( item.item||'product')+'_'+today()+'.pdf';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(()=>URL.revokeObjectURL(url),5000);
+      notify('Quote PDF downloaded!','success');
+    }catch(e){ notify('PDF error: '+e.message,'error'); }
+  },200);
 }
 
 function generateAndShare(){
