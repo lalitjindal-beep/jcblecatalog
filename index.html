@@ -82,6 +82,7 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .filter-btn{width:40px;height:40px;background:var(--accent);border:none;border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;font-size:17px;cursor:pointer;flex-shrink:0;transition:all .15s}
 .filter-btn:active{transform:scale(.92);background:var(--accent2)}
 .filter-btn.has-filter{background:var(--gold)}
+.filter-btn.select-active{background:var(--green)}
 
 /* ── FILTER PILLS ROW ── */
 .filter-pills-row{padding:8px 14px;display:flex;gap:7px;overflow-x:auto;flex-shrink:0;background:var(--surface);border-bottom:1px solid var(--border)}
@@ -107,9 +108,10 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .card-img-wrap{position:relative;width:100%;aspect-ratio:1;overflow:hidden;border-radius:var(--r) var(--r) 0 0;flex-shrink:0;background:#fff}
 .card-img-wrap img{width:100%;height:100%;object-fit:contain;display:block;mix-blend-mode:multiply}
 .card-img-wrap .no-photo{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--text3)}
-.card-select{position:absolute;top:6px;right:6px;z-index:10;width:28px;height:28px;border-radius:50%;border:2.5px solid rgba(255,255,255,.9);background:rgba(255,255,255,.8);box-shadow:0 1px 4px rgba(0,0,0,.18);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);font-size:13px;color:var(--text3);line-height:1;padding:0}
-.card-select:active{transform:scale(.88)}
-.product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff;box-shadow:0 1px 6px rgba(30,58,95,.35)}
+.card-select{position:absolute;top:6px;right:6px;z-index:10;width:22px;height:22px;border-radius:50%;border:1.5px solid rgba(255,255,255,.95);background:rgba(255,255,255,.55);box-shadow:0 1px 3px rgba(0,0,0,.15);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .15s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);font-size:11px;color:transparent;line-height:1;padding:0;opacity:.85}
+.product-grid.select-mode .card-select{opacity:1;width:24px;height:24px}
+.card-select:active{transform:scale(.85)}
+.product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff;box-shadow:0 1px 5px rgba(30,58,95,.4);opacity:1}
 .card-body{padding:7px 8px;flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden;border-radius:0 0 var(--r) var(--r)}
 .card-code{font-family:var(--mono);font-size:9.5px;font-weight:600;color:var(--accent2);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .card-name{font-size:11px;font-weight:700;color:var(--text);line-height:1.3;margin-bottom:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
@@ -375,6 +377,7 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
       <button class="search-clear" id="search-clear" onclick="clearSearch()">✕</button>
     </div>
     <button class="filter-btn" id="filter-btn" onclick="openFilterSheet()">⚙</button>
+    <button class="filter-btn" id="select-mode-btn" onclick="toggleSelectMode()" title="Select multiple">☑</button>
   </div>
 
   <!-- ACTIVE FILTER PILLS -->
@@ -567,6 +570,7 @@ let state = {
   searchQ: '', filters: {},
   selected: new Set(),
   gridView: true, // true=grid, false=list
+  selectMode: false,
   currentItem: null,
   pdfStyle: 'brochure',
   priceMode: 'fob',
@@ -771,10 +775,18 @@ function getFiltered(){
   return state.items.filter(item => {
     // selected-only tab
     if(f._selOnly && !state.selected.has(item.id)) return false;
-    // product type filter (ecommerce style)
-    if(f.types?.length && !f.types.includes(item.type)) return false;
-    // category filter
-    if(f.categories?.length && !f.categories.includes(item.category)) return false;
+    // product type filter (ecommerce style) - case/whitespace-insensitive match
+    if(f.types?.length){
+      const itemType = (item.type||'').trim().toLowerCase();
+      const match = f.types.some(t=>t.trim().toLowerCase()===itemType);
+      if(!match) return false;
+    }
+    // category filter - case/whitespace-insensitive match
+    if(f.categories?.length){
+      const itemCat = (item.category||'').trim().toLowerCase();
+      const match = f.categories.some(c=>c.trim().toLowerCase()===itemCat);
+      if(!match) return false;
+    }
     // material filter
     if(f.material && !(item.material||'').toLowerCase().includes(f.material.toLowerCase())) return false;
     // weight range
@@ -837,7 +849,7 @@ function render(){
   }
   empty.style.display = 'none';
   grid.style.display = 'grid';
-  grid.className = 'product-grid' + (state.gridView ? '' : ' list-view');
+  grid.className = 'product-grid' + (state.gridView ? '' : ' list-view') + (state.selectMode ? ' select-mode' : '');
   grid.innerHTML = items.map(item => productCard(item)).join('');
   updateSelBar();
   updateActivePills();
@@ -855,7 +867,8 @@ function productCard(item){
     : `<div class="card-img-wrap"><div class="no-photo">📦</div><button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</button></div>`;
   const priceEl = state.showPrices ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
 
-  return `<div class="product-card${sel?' selected':''}" onclick="openDetail(${item.id})">
+  const cardClick = state.selectMode ? `toggleSel(${item.id})` : `openDetail(${item.id})`;
+  return `<div class="product-card${sel?' selected':''}" onclick="${cardClick}" onmousedown="cardPressStart(${item.id})" onmouseup="cardPressEnd()" onmouseleave="cardPressEnd()" ontouchstart="cardPressStart(${item.id})" ontouchend="cardPressEnd()" ontouchcancel="cardPressEnd()">
   ${imgEl}
   <div class="card-body">
     <div class="card-code">${esc(code)}${ref?' · <span style="color:#7c3aed">'+esc(ref)+'</span>':''}</div>
@@ -865,6 +878,38 @@ function productCard(item){
     ${item.weight ? `<div class="card-weight">${item.weight} kg</div>` : ''}
   </div>
 </div>`;
+}
+
+// ── MULTI-SELECT MODE (iPhone Photos style) ───────────────────────────────────
+let _pressTimer = null;
+function cardPressStart(id){
+  if(state.selectMode) return;
+  _pressTimer = setTimeout(()=>{
+    state.selectMode = true;
+    toggleSel(id);
+    updateSelectModeUI();
+    render();
+    if(navigator.vibrate) navigator.vibrate(15);
+  }, 480);
+}
+function cardPressEnd(){
+  if(_pressTimer){ clearTimeout(_pressTimer); _pressTimer=null; }
+}
+
+function toggleSelectMode(){
+  state.selectMode = !state.selectMode;
+  if(!state.selectMode) state.selected.clear();
+  updateSelectModeUI();
+  render();
+}
+
+function updateSelectModeUI(){
+  const btn = $('select-mode-btn');
+  if(btn){
+    btn.classList.toggle('select-active', state.selectMode);
+    btn.textContent = state.selectMode ? '✕' : '☑';
+    btn.title = state.selectMode ? 'Exit select mode' : 'Select multiple';
+  }
 }
 
 // ── SEARCH & FILTER ──────────────────────────────────────────────────────────
@@ -957,6 +1002,7 @@ function toggleTypeChip(el, type){
   if(state.filters.types.includes(type)) state.filters.types = state.filters.types.filter(t=>t!==type);
   else state.filters.types.push(type);
   el.classList.toggle('active');
+  render();
 }
 
 function filterTypeChips(q){
@@ -974,6 +1020,7 @@ function toggleCatChip(el, cat){
   if(state.filters.categories.includes(cat)) state.filters.categories = state.filters.categories.filter(c=>c!==cat);
   else state.filters.categories.push(cat);
   el.classList.toggle('active');
+  render();
 }
 function toggleMat(el, mat){
   const chips = document.querySelectorAll('#filter-body .fchip');
@@ -1093,7 +1140,9 @@ ${galleryHTML}
     <button class="action-btn secondary" onclick="toggleSel(${item.id});closeDetail()">
       ${state.selected.has(item.id) ? '✓ Selected' : '+ Select'}
     </button>
-    <button class="action-btn primary" onclick="openQuoteSheet(${item.id})">⚡ Quote</button>
+    ${state.showPrices
+      ? `<button class="action-btn primary" onclick="openQuoteSheet(${item.id})">⚡ Quote</button>`
+      : `<button class="action-btn secondary" onclick="notify('Switch to With Prices mode (top bar) to use Quote','error')" style="opacity:.6">🔒 Quote</button>`}
   </div>
   <div class="action-btns" style="margin-top:8px">
     <button class="action-btn secondary" onclick="shareCurrentProduct()">↑ Share</button>
@@ -1814,6 +1863,10 @@ function showPpInDetail(itemId){
 function openQuoteSheet(itemId){
   const item = state.items.find(r=>r.id===itemId);
   if(!item){ notify('Product not found','error'); return; }
+  if(!state.showPrices){
+    notify('Switch to "With Prices" mode first (top bar) to use Quick Quote','error');
+    return;
+  }
   state._quoteItem = item;
   $('quote-title').textContent = '⚡ Quick Quote — '+( item.item||'');
   renderQuoteBody(item);
