@@ -109,8 +109,10 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 .card-cat{display:inline-block;padding:1px 6px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:3px}
 .card-price{font-family:var(--mono);font-size:11px;font-weight:800;color:var(--green)}
 .card-weight{font-size:9.5px;color:var(--text3);font-family:var(--mono)}
-.card-select{position:absolute;top:5px;right:5px;width:20px;height:20px;background:#fff;border:2px solid var(--border);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;transition:all .15s;box-shadow:var(--shadow-sm)}
-.product-card.selected .card-select{background:var(--accent2);border-color:var(--accent2);color:#fff}
+.card-select{position:absolute;top:0;right:0;width:36px;height:36px;background:rgba(255,255,255,.85);border:none;border-radius:0 var(--r) 0 12px;display:flex;align-items:center;justify-content:center;font-size:16px;transition:all .15s;cursor:pointer;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+.product-card.selected .card-select{background:var(--accent2);color:#fff}
+.product-card:not(.selected) .card-select::after{content:'☐';font-size:18px;color:var(--text3)}
+.product-card.selected .card-select::after{content:'☑';font-size:18px;color:#fff}
 /* List view card */
 .product-grid.list-view .product-card{flex-direction:row}
 .product-grid.list-view .card-img{width:80px;height:80px;aspect-ratio:unset;flex-shrink:0;border-radius:0}
@@ -846,7 +848,7 @@ function productCard(item){
   const priceEl = (!state.isViewer) ? `<div class="card-price">${sym}${fob.toFixed(4)}</div>` : '';
 
   return `<div class="product-card${sel?' selected':''}" onclick="openDetail(${item.id})">
-  <div class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})">${sel?'✓':''}</div>
+  <button class="card-select" onclick="event.stopPropagation();toggleSel(${item.id})" title="${sel?'Deselect':'Select'}"></button>
   ${imgEl}
   <div class="card-body">
     <div class="card-code">${esc(code)}${ref?' · <span style="color:#7c3aed">'+esc(ref)+'</span>':''}</div>
@@ -1080,8 +1082,6 @@ function toggleSel(id){
   const card = document.querySelector(`.product-card[onclick="openDetail(${id})"]`);
   if(card){
     card.classList.toggle('selected', state.selected.has(id));
-    const sel = card.querySelector('.card-select');
-    if(sel) sel.textContent = state.selected.has(id) ? '✓' : '';
   }
 }
 
