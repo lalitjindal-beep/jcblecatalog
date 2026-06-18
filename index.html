@@ -1269,6 +1269,7 @@ function setPriceMode(mode, btn){
 function renderCalcBody(){
   const mode = state.priceMode;
   const showFreight = mode==='cif'||mode==='cfr';
+  const savedShip = state.settings?.system?.defaultShipment || {};
   $('calc-body').innerHTML = `
 <div class="calc-row">
   <div class="calc-label">Extra Margin %</div>
@@ -1286,13 +1287,17 @@ ${showFreight ? `
   <div id="freight-auto-rows" style="display:none">
     <div class="calc-row">
       <div class="calc-label">Total Freight (€)</div>
-      <input class="calc-input" type="number" id="calc-freight-total" value="0" min="0" step="1" oninput="autoFreightCalc()">
+      <input class="calc-input" type="number" id="calc-freight-total" value="${savedShip.totalFreight||0}" min="0" step="1" oninput="autoFreightCalc()">
     </div>
     <div class="calc-row">
       <div class="calc-label">Container Cap. (kg)</div>
-      <input class="calc-input" type="number" id="calc-container-cap" value="21000" min="1" step="100" oninput="autoFreightCalc()">
+      <input class="calc-input" type="number" id="calc-container-cap" value="${savedShip.containerCap||21000}" min="1" step="100" oninput="autoFreightCalc()">
     </div>
     <div id="freight-per-kg-display" style="padding:4px 0 2px;font-size:12px;color:var(--accent2);font-weight:700;font-family:var(--mono)">→ €/kg: 0.0000</div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text2);font-weight:600;margin-top:6px">
+      <input type="checkbox" id="save-shipment-default" style="width:14px;height:14px;accent-color:var(--accent2)" onchange="if(this.checked)saveShipmentDefault()"> Save as default for this shipment
+    </label>
+    ${savedShip.totalFreight ? `<div style="font-size:10px;color:var(--text3);margin-top:2px">Last saved: €${savedShip.totalFreight} ÷ ${savedShip.containerCap}kg</div>` : ''}
   </div>
 </div>` : ''}
 ${mode==='cif' ? `<div class="calc-row">
@@ -1301,6 +1306,18 @@ ${mode==='cif' ? `<div class="calc-row">
 </div>` : ''}
 <div style="font-size:11px;color:var(--text3);padding:4px 0 0">Based on ${state.selected.size} selected item${state.selected.size!==1?'s':''}</div>`;
   calcUpdate();
+  if(savedShip.totalFreight && $('freight-auto')){
+    // leave toggle off by default; user can check it to use saved values
+  }
+}
+
+function saveShipmentDefault(){
+  const total = parseFloat($('calc-freight-total')?.value)||0;
+  const cap   = parseFloat($('calc-container-cap')?.value)||21000;
+  if(!_db) return;
+  _db.ref('fob_manager/settings/system/defaultShipment').set({totalFreight:total, containerCap:cap, savedAt:Date.now()})
+    .then(()=>notify('Shipment freight saved as default','success'))
+    .catch(()=>notify('Failed to save default','error'));
 }
 
 function toggleFreightMode(){
@@ -1819,6 +1836,8 @@ function togglePriceMode(){
   if(state.showPrices){
     // turning OFF doesn't need a PIN
     state.showPrices = false;
+    state.isPpUnlocked = false;
+    clearTimeout(_priceTimeoutTimer);
     updatePriceToggleBtn();
     render();
     return;
@@ -1862,37 +1881,65 @@ function checkPpPin(){
   const entered = $('pp-pin-input').value;
   const errEl = $('pp-pin-err');
   const purpose = state._pinPurpose || 'pp';
+  const correct = state.settings?.system?.ppPassword || '';
 
-  if(purpose === 'showPrices'){
-    const correct = state.settings?.system?.priceTogglePin || '1234';
-    if(entered === correct){
-      state.showPrices = true;
-      updatePriceToggleBtn();
-      closePpModal();
-      notify('Prices now visible 💰','success');
-      render();
-    } else {
-      errEl.textContent = 'Incorrect PIN. Try again.';
-      $('pp-pin-input').value='';
-      $('pp-pin-input').focus();
-    }
+  if(!correct){
+    errEl.textContent = 'No PIN set. Set ppPassword in Firebase under fob_manager/settings/system.';
     return;
   }
 
-  // purpose === 'pp' (purchase price reveal)
-  const correct = state.settings?.system?.ppPassword || state.settings?.system?.viewerPassword || '';
-  if(!correct){ errEl.textContent = 'No PP PIN set. Set ppPassword in FOB Manager Settings.'; return; }
   if(entered === correct){
-    state.isPpUnlocked = true;
-    closePpModal();
-    notify('PP access unlocked 🔓','success');
-    if(state._ppPendingItemId) showPpInDetail(state._ppPendingItemId);
+    if(purpose === 'showPrices'){
+      state.showPrices = true;
+      state.isPpUnlocked = true; // single unified PIN unlocks both
+      updatePriceToggleBtn();
+      closePpModal();
+      notify('Prices now visible 💰','success');
+      armPriceSessionTimeout();
+      render();
+    } else {
+      state.isPpUnlocked = true;
+      closePpModal();
+      notify('PP access unlocked 🔓','success');
+      if(state._ppPendingItemId) showPpInDetail(state._ppPendingItemId);
+    }
   } else {
     errEl.textContent = 'Incorrect PIN. Try again.';
     $('pp-pin-input').value='';
     $('pp-pin-input').focus();
   }
 }
+
+// ── PRICE SESSION AUTO-TIMEOUT (security) ──────────────────────────────────
+const PRICE_SESSION_TIMEOUT_MS = 10*60*1000; // 10 minutes
+let _priceTimeoutTimer = null;
+function armPriceSessionTimeout(){
+  clearTimeout(_priceTimeoutTimer);
+  _priceTimeoutTimer = setTimeout(()=>{
+    if(state.showPrices){
+      state.showPrices = false;
+      state.isPpUnlocked = false;
+      updatePriceToggleBtn();
+      notify('Prices auto-hidden after 10 min idle 🔒','info');
+      render();
+    }
+  }, PRICE_SESSION_TIMEOUT_MS);
+}
+function resetPriceSessionTimeout(){
+  if(state.showPrices) armPriceSessionTimeout();
+}
+// Reset timer on any user interaction while prices are visible
+['click','touchstart','keydown'].forEach(evt=>{
+  document.addEventListener(evt, resetPriceSessionTimeout, {passive:true});
+});
+// Auto-hide immediately if app is backgrounded/tab hidden
+document.addEventListener('visibilitychange', ()=>{
+  if(document.hidden && state.showPrices){
+    state.showPrices = false;
+    state.isPpUnlocked = false;
+    updatePriceToggleBtn();
+  }
+});
 
 function showPpInDetail(itemId){
   const item = state.items.find(r=>r.id===itemId);
@@ -1964,66 +2011,98 @@ function loadQuoteHistory(){
     $('qh-body').innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px">Error loading history: ${e.message}</div>`;
   });
 }
+function buildHistoryRow(e){
+  const d = new Date(e.ts);
+  const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+  const status = e.status || 'pending';
+  const statusColors = {won:'var(--green)',lost:'var(--red)',pending:'var(--text3)','no-response':'var(--amber)'};
+  const statusLabels = {won:'✓ Won',lost:'✕ Lost',pending:'⋯ Pending','no-response':'⚠ No Response'};
+  return `<div style="padding:10px 0;border-bottom:1px solid var(--border)" data-key="${e.key}">
+    <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+      <div style="min-width:0">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(e.type||e.code||'—')}</div>
+        <div style="font-size:11px;font-family:var(--mono);color:var(--accent2)">${esc(e.code||'')}${e.refCode?' · '+esc(e.refCode):''}</div>
+        ${e.client?`<div style="font-size:11px;color:var(--text2);font-weight:600;margin-top:1px">👤 ${esc(e.client)}</div>`:''}
+        <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${dateStr}</div>
+      </div>
+      <div style="text-align:right;flex-shrink:0">
+        <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${e.sym||''}${(e.unitPrice||0).toFixed(4)}</div>
+        ${e.qty>1?`<div style="font-size:10.5px;color:var(--text3)">×${e.qty} = ${e.sym||''}${(e.grandTotal||0).toFixed(2)}</div>`:''}
+        ${e.margin>0?`<div style="font-size:9.5px;color:var(--text3)">${e.margin}% margin</div>`:''}
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
+      ${['pending','won','lost','no-response'].map(s=>`<button onclick="setQuoteStatus('${e.key}','${s}')" style="font-size:10px;font-weight:700;padding:3px 9px;border-radius:var(--r-full);border:1.5px solid ${status===s?statusColors[s]:'var(--border)'};background:${status===s?statusColors[s]:'#fff'};color:${status===s?'#fff':'var(--text3)'};cursor:pointer;font-family:var(--font)">${statusLabels[s]}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
 function renderQuoteHistoryList(entries){
   if(!entries.length){
     $('qh-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">No quotes shared yet.<br>Quotes you copy/share/PDF from Quick Quote will appear here.</div>';
     return;
   }
-  const rows = entries.map(e=>{
-    const d = new Date(e.ts);
-    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
-        <div style="min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(e.type||e.code||'—')}</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--accent2)">${esc(e.code||'')}${e.refCode?' · '+esc(e.refCode):''}</div>
-          <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${dateStr}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${e.sym||''}${(e.unitPrice||0).toFixed(4)}</div>
-          ${e.qty>1?`<div style="font-size:10.5px;color:var(--text3)">×${e.qty} = ${e.sym||''}${(e.grandTotal||0).toFixed(2)}</div>`:''}
-          ${e.margin>0?`<div style="font-size:9.5px;color:var(--text3)">${e.margin}% margin</div>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
   $('qh-body').innerHTML = `
-<input style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--font);margin-bottom:12px" placeholder="Search by product code or name…" oninput="filterQuoteHistory(this.value)">
-<div id="qh-list">${rows}</div>`;
+<div style="display:flex;gap:8px;margin-bottom:12px">
+  <input style="flex:1;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--font)" placeholder="Search product or client…" oninput="filterQuoteHistory(this.value)">
+  <button onclick="exportQuoteHistoryCSV()" style="height:38px;padding:0 14px;background:var(--accent);border:none;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;font-family:var(--font);color:#fff;white-space:nowrap">⬇ CSV</button>
+</div>
+<div id="qh-list">${entries.map(buildHistoryRow).join('')}</div>`;
 }
+
 function filterQuoteHistory(q){
   q = q.toLowerCase().trim();
   const entries = state._qhEntries||[];
   const filtered = !q ? entries : entries.filter(e=>
-    (e.code||'').toLowerCase().includes(q) || (e.type||'').toLowerCase().includes(q) || (e.refCode||'').toLowerCase().includes(q));
+    (e.code||'').toLowerCase().includes(q) || (e.type||'').toLowerCase().includes(q) ||
+    (e.refCode||'').toLowerCase().includes(q) || (e.client||'').toLowerCase().includes(q));
   const listEl = $('qh-list');
   if(!listEl) return;
   if(!filtered.length){ listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">No matches</div>'; return; }
-  listEl.innerHTML = filtered.map(e=>{
-    const d = new Date(e.ts);
-    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
-    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
-      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
-        <div style="min-width:0">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(e.type||e.code||'—')}</div>
-          <div style="font-size:11px;font-family:var(--mono);color:var(--accent2)">${esc(e.code||'')}${e.refCode?' · '+esc(e.refCode):''}</div>
-          <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${dateStr}</div>
-        </div>
-        <div style="text-align:right;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${e.sym||''}${(e.unitPrice||0).toFixed(4)}</div>
-          ${e.qty>1?`<div style="font-size:10.5px;color:var(--text3)">×${e.qty} = ${e.sym||''}${(e.grandTotal||0).toFixed(2)}</div>`:''}
-          ${e.margin>0?`<div style="font-size:9.5px;color:var(--text3)">${e.margin}% margin</div>`:''}
-        </div>
-      </div>
-    </div>`;
-  }).join('');
+  listEl.innerHTML = filtered.map(buildHistoryRow).join('');
+}
+
+function setQuoteStatus(key, status){
+  if(!_db) return;
+  _db.ref('fob_manager/quoteHistory/'+key).update({status}).then(()=>{
+    const entry = (state._qhEntries||[]).find(e=>e.key===key);
+    if(entry) entry.status = status;
+    const rowEl = document.querySelector(`#qh-list [data-key="${key}"]`);
+    if(rowEl && entry) rowEl.outerHTML = buildHistoryRow(entry);
+    notify('Status updated','success');
+  }).catch(()=>notify('Failed to update status','error'));
+}
+
+function exportQuoteHistoryCSV(){
+  const entries = state._qhEntries||[];
+  if(!entries.length){ notify('No history to export','error'); return; }
+  const headers = ['Date','Product Code','Product Type','Ref Code','Client','Qty','Unit Price','Currency','Total','Margin %','Freight','Status'];
+  const rows = entries.map(e=>[
+    new Date(e.ts).toLocaleString('en-GB'), e.code||'', e.type||'', e.refCode||'', e.client||'',
+    e.qty||1, (e.unitPrice||0).toFixed(4), e.currency||'', (e.grandTotal||0).toFixed(2),
+    e.margin||0, e.freight||0, e.status||'pending'
+  ]);
+  const csv = [headers, ...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'JCBL_QuoteHistory_'+today()+'.csv';
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url), 5000);
+  notify('CSV exported!','success');
 }
 
 function renderQuoteBody(item){
   const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
   const sym = curSym(item.currency||'EUR');
+  const lastClient = state._lastClientName || '';
   $('quote-body').innerHTML = `
 <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">Base FOB: ${sym}${fob.toFixed(4)} · Weight: ${item.weight||0} kg · ${item.material||'—'}</div>
+
+<div class="quote-row">
+  <span class="quote-label">Client / Company</span>
+  <input class="quote-input" type="text" id="qq-client" placeholder="Optional" value="${esc(lastClient)}" style="text-align:left;font-family:var(--font)">
+</div>
 
 <div class="quote-row">
   <span class="quote-label">Quantity</span>
@@ -2048,8 +2127,8 @@ function renderQuoteBody(item){
     <span class="quote-unit">€/kg</span>
   </div>
   <div style="font-size:11px;color:var(--text3);margin-bottom:10px">
-    Or: <input type="number" id="qq-freight-total" placeholder="Total freight €" style="width:120px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> ÷
-    <input type="number" id="qq-container-cap" placeholder="Container kg" value="21000" style="width:100px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> = per kg
+    Or: <input type="number" id="qq-freight-total" placeholder="Total freight €" value="${state.settings?.system?.defaultShipment?.totalFreight||''}" style="width:120px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> ÷
+    <input type="number" id="qq-container-cap" placeholder="Container kg" value="${state.settings?.system?.defaultShipment?.containerCap||21000}" style="width:100px;height:32px;border:1px solid var(--border);border-radius:6px;padding:0 8px;font-size:13px;font-family:var(--mono);outline:none;background:var(--bg);-webkit-appearance:none" oninput="autoQqFreight()"> = per kg
   </div>
 </div>
 
@@ -2102,6 +2181,7 @@ function updateQuote(){
   const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
   const margin = parseFloat($('qq-margin')?.value)||0;
   const qty = Math.max(1, parseInt($('qq-qty')?.value)||1);
+  const clientName = $('qq-client')?.value?.trim() || '';
   const freightOn = $('qq-freight-on')?.checked;
   const freightKg = freightOn ? (parseFloat($('qq-freight-kg')?.value)||0) : 0;
   const sym = curSym(item.currency||'EUR');
@@ -2123,8 +2203,21 @@ function updateQuote(){
   state._qqMargin = margin;
   state._qqFreight = freightKg;
   state._qqQty = qty;
+  state._qqClient = clientName;
+  state._lastClientName = clientName;
   state._qqGrandTotal = grandTotal;
   analyseTarget();
+}
+
+// ── QUANTITY-TIERED MARGIN FLOORS ──────────────────────────────────────────
+function getMarginFloorForQty(qty){
+  // Configurable via Firebase: fob_manager/settings/system/marginTiers = [{max:50,floor:15},{max:200,floor:10},{max:999999,floor:6}]
+  const tiers = state.settings?.system?.marginTiers || [
+    {max:50, floor:15}, {max:200, floor:10}, {max:999999, floor:6}
+  ];
+  const sorted = [...tiers].sort((a,b)=>a.max-b.max);
+  for(const t of sorted){ if(qty <= t.max) return t.floor; }
+  return sorted[sorted.length-1]?.floor ?? 8;
 }
 
 function analyseTarget(){
@@ -2135,16 +2228,22 @@ function analyseTarget(){
   const freightKg = freightOn ? (parseFloat($('qq-freight-kg')?.value)||0) : 0;
   const freightPer = freightKg * (parseFloat(item.weight)||0);
   const target = parseFloat($('qq-target')?.value)||0;
+  const qty = Math.max(1, parseInt($('qq-qty')?.value)||1);
+  const floor = getMarginFloorForQty(qty);
   const el = $('qq-target-result');
   if(!el) return;
-  if(!target){ el.innerHTML = '<span style="color:var(--text3)">Enter client\'s target price to see your effective margin</span>'; return; }
+  if(!target){
+    el.innerHTML = `<span style="color:var(--text3)">Enter client's target price to see your effective margin</span><br><span style="font-size:10.5px;color:var(--accent2);font-weight:600">Floor for ${qty} pcs: ${floor}% minimum</span>`;
+    return;
+  }
   const effectiveMargin = ((target - freightPer) / fob - 1) * 100;
-  const cls = effectiveMargin >= 15 ? 'good' : effectiveMargin >= 8 ? 'warn' : 'bad';
+  const cls = effectiveMargin >= floor ? 'good' : effectiveMargin >= floor*0.6 ? 'warn' : 'bad';
   const sym = curSym(item.currency||'EUR');
   el.innerHTML = `At ${sym}${target.toFixed(4)}: <span class="quote-margin-indicator ${cls}" style="display:inline-block">${effectiveMargin.toFixed(1)}% margin</span>
+    <span style="font-size:10px;color:var(--text3);margin-left:4px">(floor for ${qty} pcs: ${floor}%)</span>
     ${effectiveMargin < 0 ? '<br><span style="color:var(--red);font-weight:700;font-size:11px">⚠️ Below cost — decline or negotiate</span>' :
-      effectiveMargin < 8 ? '<br><span style="color:var(--amber);font-weight:700;font-size:11px">⚠️ Tight margin — check overhead</span>' :
-      '<br><span style="color:var(--green);font-weight:700;font-size:11px">✓ Acceptable — can proceed</span>'}`;
+      effectiveMargin < floor ? `<br><span style="color:var(--amber);font-weight:700;font-size:11px">⚠️ Below your ${floor}% floor for this quantity</span>` :
+      '<br><span style="color:var(--green);font-weight:700;font-size:11px">✓ Meets floor — can proceed</span>'}`;
 }
 
 function logQuoteHistory(item, price, qty, grandTotal){
@@ -2156,6 +2255,8 @@ function logQuoteHistory(item, price, qty, grandTotal){
       unitPrice: price, qty: qty||1, grandTotal: grandTotal||price,
       currency: item.currency||'EUR', sym,
       margin: state._qqMargin||0, freight: state._qqFreight||0,
+      client: state._qqClient || '',
+      status: 'pending',
       ts: Date.now(), date: new Date().toISOString()
     };
     _db.ref('fob_manager/quoteHistory').push(entry);
