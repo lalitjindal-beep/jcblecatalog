@@ -366,6 +366,7 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
     </div>
     <button class="price-toggle-btn" id="price-toggle-btn" onclick="togglePriceMode()" title="Toggle prices visibility"></button>
     <div class="hdr-btn" onclick="toggleView()" id="view-toggle-btn" title="Toggle view">⊞</div>
+    <div class="hdr-btn" onclick="openQuoteHistory()" title="Quote History">🕐</div>
     <div class="hdr-btn" onclick="openPdfStyleSheet()" title="Generate PDF">📄</div>
   </div>
 
@@ -456,6 +457,18 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
     <button class="quote-close" onclick="closeQuoteSheet()">✕</button>
   </div>
   <div class="quote-body" id="quote-body"></div>
+</div>
+
+<!-- QUOTE HISTORY SHEET -->
+<div class="sheet-backdrop" id="qh-backdrop" onclick="closeQuoteHistory()"></div>
+<div class="quote-sheet" id="qh-sheet">
+  <div class="quote-header">
+    <div class="quote-title">🕐 Quote History</div>
+    <button class="quote-close" onclick="closeQuoteHistory()">✕</button>
+  </div>
+  <div class="quote-body" id="qh-body">
+    <div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Loading…</div>
+  </div>
 </div>
 <div class="filter-sheet" id="filter-sheet">
   <div class="sheet-handle"></div>
@@ -590,12 +603,12 @@ const calcFOB = (pp,marg,fob,exr) => exr ? pp*(1+(marg+fob)/100)/exr : 0;
 const catCls = cat => 'cat-'+(cat||'OTHER').replace(/\s+/g,'-').toUpperCase();
 const today = () => new Date().toISOString().split('T')[0];
 
-function notify(msg, type){
+function notify(msg, type, duration){
   const el = $('notif');
-  el.textContent = msg;
+  el.innerHTML = msg;
   el.className = 'notif show ' + (type||'');
   clearTimeout(el._t);
-  el._t = setTimeout(() => el.className='notif', 3000);
+  el._t = setTimeout(() => el.className='notif', duration||3000);
 }
 
 // ── FIREBASE CONFIG ──────────────────────────────────────────────────────────
@@ -1174,7 +1187,24 @@ function toggleSel(id){
   }
 }
 
-function clearSelection(){ state.selected.clear(); updateSelBar(); render(); }
+function clearSelection(){
+  const prevSelected = new Set(state.selected);
+  if(prevSelected.size === 0) return;
+  state.selected.clear();
+  updateSelBar();
+  render();
+  notify(`${prevSelected.size} item(s) cleared — <a href="javascript:undoClearSelection()" style="color:#fff;text-decoration:underline;font-weight:700">Undo</a>`,'info',4000);
+  state._lastClearedSelection = prevSelected;
+}
+function undoClearSelection(){
+  if(state._lastClearedSelection){
+    state.selected = new Set(state._lastClearedSelection);
+    state._lastClearedSelection = null;
+    updateSelBar();
+    render();
+    notify('Selection restored','success');
+  }
+}
 
 function updateSelBar(){
   const n = state.selected.size;
@@ -1210,12 +1240,14 @@ function setTab(tab){
   }
   else if(tab === 'pricelist'){
     if(!state.selected.size){ notify('Select items first to build a price list'); $('tab-catalogue').classList.add('active'); state.tab='catalogue'; return; }
+    if(!state.showPrices){ notify('Switch to "With Prices" mode (top bar) to view Price List'); $('tab-catalogue').classList.add('active'); state.tab='catalogue'; return; }
     renderPriceListTab();
   }
 }
 
 // ── PRICE CALCULATOR ─────────────────────────────────────────────────────────
 function openPriceCalc(){
+  if(!state.showPrices){ notify('Switch to "With Prices" mode (top bar) to use Price Calculator','error'); return; }
   if(!state.selected.size){ notify('Select items first to price them'); return; }
   renderCalcBody();
   $('price-calc-sheet').classList.add('open');
@@ -1370,18 +1402,46 @@ function renderPriceListTab(){
   </div>
   <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;background:var(--surface2);padding:10px;border-radius:8px">
     <span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap">Extra Margin %</span>
-    <input type="number" id="pltab-margin" value="0" min="0" max="200" step="0.5" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows()">
+    <input type="number" id="pltab-margin" value="0" min="0" max="200" step="0.5" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows();analysePriceListTarget()">
     <span style="font-size:12px;font-weight:700;color:var(--text2);white-space:nowrap;margin-left:8px">Freight €/kg</span>
-    <input type="number" id="pltab-freight" value="0" min="0" step="0.01" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows()">
+    <input type="number" id="pltab-freight" value="0" min="0" step="0.01" style="width:70px;height:34px;border:1.5px solid var(--border);border-radius:6px;padding:0 8px;font-size:14px;font-family:var(--mono);text-align:center;outline:none;background:#fff;-webkit-appearance:none" oninput="renderPriceListRows();analysePriceListTarget()">
   </div>
   <div id="pltab-rows"></div>
   <div id="pltab-summary"></div>
+  <div class="target-section" style="margin-top:12px">
+    <div class="target-section-title">🎯 Client Target — Whole Order</div>
+    <div class="quote-row" style="margin-bottom:4px">
+      <span class="quote-label">Client offers (total)</span>
+      <input class="quote-input" type="number" id="pltab-target" placeholder="0.00" step="0.01" oninput="analysePriceListTarget()">
+      <span class="quote-unit">€</span>
+    </div>
+    <div id="pltab-target-result" style="font-size:12px;color:var(--text3);margin-top:4px">Enter client's total target price for this order to see your overall margin</div>
+  </div>
   <div style="display:flex;gap:8px;margin-top:14px">
     <button onclick="setTab('catalogue')" style="flex:1;height:42px;background:var(--surface2);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);color:var(--text2)">← Catalogue</button>
     <button onclick="generatePriceListPdf()" style="flex:2;height:42px;background:var(--accent);border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--font);color:#fff">📄 Generate PDF</button>
   </div>
 </div>`;
   renderPriceListRows();
+}
+
+function analysePriceListTarget(){
+  const selItems = state.items.filter(r=>state.selected.has(r.id));
+  const margin = parseFloat($('pltab-margin')?.value)||0;
+  const freight = parseFloat($('pltab-freight')?.value)||0;
+  const totalFOBWithMargin = selItems.reduce((s,r)=>s+getPrice(r, margin, freight),0);
+  const baseFOB = selItems.reduce((s,r)=>s+calcFOB(r.pp,r.marg,r.fob,r.exrate),0);
+  const target = parseFloat($('pltab-target')?.value)||0;
+  const el = $('pltab-target-result');
+  if(!el) return;
+  if(!target){ el.innerHTML = '<span style="color:var(--text3)">Enter client\'s total target price for this order to see your overall margin</span>'; return; }
+  const freightTotal = selItems.reduce((s,r)=>s+freight*(parseFloat(r.weight)||0),0);
+  const effectiveMargin = ((target - freightTotal) / baseFOB - 1) * 100;
+  const cls = effectiveMargin >= 15 ? 'good' : effectiveMargin >= 8 ? 'warn' : 'bad';
+  el.innerHTML = `At €${target.toFixed(2)} total: <span class="quote-margin-indicator ${cls}" style="display:inline-block">${effectiveMargin.toFixed(1)}% margin</span>
+    ${effectiveMargin < 0 ? '<br><span style="color:var(--red);font-weight:700;font-size:11px">⚠️ Below cost — decline or negotiate</span>' :
+      effectiveMargin < 8 ? '<br><span style="color:var(--amber);font-weight:700;font-size:11px">⚠️ Tight margin — check overhead</span>' :
+      '<br><span style="color:var(--green);font-weight:700;font-size:11px">✓ Acceptable — can proceed</span>'}`;
 }
 
 function renderPriceListRows(){
@@ -1879,11 +1939,97 @@ function closeQuoteSheet(){
   $('quote-backdrop').classList.remove('open');
 }
 
+// ── QUOTE HISTORY ──────────────────────────────────────────────────────────
+function openQuoteHistory(){
+  if(!state.showPrices){
+    notify('Switch to "With Prices" mode first to view quote history','error');
+    return;
+  }
+  $('qh-sheet').classList.add('open');
+  $('qh-backdrop').classList.add('open');
+  loadQuoteHistory();
+}
+function closeQuoteHistory(){
+  $('qh-sheet').classList.remove('open');
+  $('qh-backdrop').classList.remove('open');
+}
+function loadQuoteHistory(){
+  if(!_db){ $('qh-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">Database not connected</div>'; return; }
+  _db.ref('fob_manager/quoteHistory').orderByChild('ts').limitToLast(100).once('value').then(snap=>{
+    const data = snap.val() || {};
+    const entries = Object.entries(data).map(([key,v])=>({key,...v})).sort((a,b)=>b.ts-a.ts);
+    state._qhEntries = entries;
+    renderQuoteHistoryList(entries);
+  }).catch(e=>{
+    $('qh-body').innerHTML = `<div style="text-align:center;padding:30px;color:var(--red);font-size:13px">Error loading history: ${e.message}</div>`;
+  });
+}
+function renderQuoteHistoryList(entries){
+  if(!entries.length){
+    $('qh-body').innerHTML = '<div style="text-align:center;padding:30px;color:var(--text3);font-size:13px">No quotes shared yet.<br>Quotes you copy/share/PDF from Quick Quote will appear here.</div>';
+    return;
+  }
+  const rows = entries.map(e=>{
+    const d = new Date(e.ts);
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(e.type||e.code||'—')}</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--accent2)">${esc(e.code||'')}${e.refCode?' · '+esc(e.refCode):''}</div>
+          <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${dateStr}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${e.sym||''}${(e.unitPrice||0).toFixed(4)}</div>
+          ${e.qty>1?`<div style="font-size:10.5px;color:var(--text3)">×${e.qty} = ${e.sym||''}${(e.grandTotal||0).toFixed(2)}</div>`:''}
+          ${e.margin>0?`<div style="font-size:9.5px;color:var(--text3)">${e.margin}% margin</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  $('qh-body').innerHTML = `
+<input style="width:100%;height:38px;border:1.5px solid var(--border);border-radius:8px;padding:0 12px;font-size:14px;outline:none;background:var(--bg);-webkit-appearance:none;font-family:var(--font);margin-bottom:12px" placeholder="Search by product code or name…" oninput="filterQuoteHistory(this.value)">
+<div id="qh-list">${rows}</div>`;
+}
+function filterQuoteHistory(q){
+  q = q.toLowerCase().trim();
+  const entries = state._qhEntries||[];
+  const filtered = !q ? entries : entries.filter(e=>
+    (e.code||'').toLowerCase().includes(q) || (e.type||'').toLowerCase().includes(q) || (e.refCode||'').toLowerCase().includes(q));
+  const listEl = $('qh-list');
+  if(!listEl) return;
+  if(!filtered.length){ listEl.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text3);font-size:13px">No matches</div>'; return; }
+  listEl.innerHTML = filtered.map(e=>{
+    const d = new Date(e.ts);
+    const dateStr = d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<div style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;justify-content:space-between;align-items:start;gap:8px">
+        <div style="min-width:0">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${esc(e.type||e.code||'—')}</div>
+          <div style="font-size:11px;font-family:var(--mono);color:var(--accent2)">${esc(e.code||'')}${e.refCode?' · '+esc(e.refCode):''}</div>
+          <div style="font-size:10.5px;color:var(--text3);margin-top:2px">${dateStr}</div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:var(--green);font-family:var(--mono)">${e.sym||''}${(e.unitPrice||0).toFixed(4)}</div>
+          ${e.qty>1?`<div style="font-size:10.5px;color:var(--text3)">×${e.qty} = ${e.sym||''}${(e.grandTotal||0).toFixed(2)}</div>`:''}
+          ${e.margin>0?`<div style="font-size:9.5px;color:var(--text3)">${e.margin}% margin</div>`:''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
 function renderQuoteBody(item){
   const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
   const sym = curSym(item.currency||'EUR');
   $('quote-body').innerHTML = `
 <div style="font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:12px">Base FOB: ${sym}${fob.toFixed(4)} · Weight: ${item.weight||0} kg · ${item.material||'—'}</div>
+
+<div class="quote-row">
+  <span class="quote-label">Quantity</span>
+  <input class="quote-input" type="number" id="qq-qty" value="1" min="1" step="1" oninput="updateQuote()">
+  <span class="quote-unit">pcs</span>
+</div>
 
 <div class="quote-row">
   <span class="quote-label">Your Margin</span>
@@ -1909,8 +2055,12 @@ function renderQuoteBody(item){
 
 <div class="quote-divider"></div>
 <div class="quote-total-row">
-  <span class="quote-total-label">Your Quote Price</span>
+  <span class="quote-total-label">Unit Price</span>
   <span class="quote-total-val" id="qq-final-price">${sym}${fob.toFixed(4)}</span>
+</div>
+<div class="quote-total-row" style="padding-top:0">
+  <span class="quote-total-label" style="font-size:12px;color:var(--text3)">Total (<span id="qq-qty-display">1</span> pcs)</span>
+  <span style="font-size:16px;font-weight:800;color:var(--text2);font-family:var(--mono)" id="qq-grand-total">${sym}${fob.toFixed(2)}</span>
 </div>
 <div id="qq-margin-badge" style="margin-bottom:12px"></div>
 
@@ -1921,6 +2071,7 @@ function renderQuoteBody(item){
     <input class="quote-input" type="number" id="qq-target" placeholder="0.00" step="0.0001" oninput="analyseTarget()">
     <span class="quote-unit">${sym}</span>
   </div>
+  <div style="font-size:10.5px;color:var(--text3);margin-bottom:4px">Per unit price. For total order target, divide by quantity first.</div>
   <div id="qq-target-result" style="font-size:12px;color:var(--text3);margin-top:4px">Enter client's target price to see your effective margin</div>
 </div>
 
@@ -1950,14 +2101,18 @@ function updateQuote(){
   if(!item) return;
   const fob = calcFOB(item.pp, item.marg, item.fob, item.exrate);
   const margin = parseFloat($('qq-margin')?.value)||0;
+  const qty = Math.max(1, parseInt($('qq-qty')?.value)||1);
   const freightOn = $('qq-freight-on')?.checked;
   const freightKg = freightOn ? (parseFloat($('qq-freight-kg')?.value)||0) : 0;
   const sym = curSym(item.currency||'EUR');
   const withMargin = fob * (1 + margin/100);
   const freightPer = freightKg * (parseFloat(item.weight)||0);
   const final = withMargin + freightPer;
+  const grandTotal = final * qty;
   const el = $('qq-final-price');
   if(el) el.textContent = sym+final.toFixed(4);
+  const qtyDisp = $('qq-qty-display'); if(qtyDisp) qtyDisp.textContent = qty;
+  const gtEl = $('qq-grand-total'); if(gtEl) gtEl.textContent = sym+grandTotal.toFixed(2);
   // Margin badge
   const badge = $('qq-margin-badge');
   if(badge){
@@ -1967,6 +2122,8 @@ function updateQuote(){
   state._qqFinal = final;
   state._qqMargin = margin;
   state._qqFreight = freightKg;
+  state._qqQty = qty;
+  state._qqGrandTotal = grandTotal;
   analyseTarget();
 }
 
@@ -1990,13 +2147,31 @@ function analyseTarget(){
       '<br><span style="color:var(--green);font-weight:700;font-size:11px">✓ Acceptable — can proceed</span>'}`;
 }
 
+function logQuoteHistory(item, price, qty, grandTotal){
+  try{
+    if(!_db) return;
+    const sym = curSym(item.currency||'EUR');
+    const entry = {
+      itemId: item.id, code: item.item||'', type: item.type||'', refCode: item.refCode||'',
+      unitPrice: price, qty: qty||1, grandTotal: grandTotal||price,
+      currency: item.currency||'EUR', sym,
+      margin: state._qqMargin||0, freight: state._qqFreight||0,
+      ts: Date.now(), date: new Date().toISOString()
+    };
+    _db.ref('fob_manager/quoteHistory').push(entry);
+  }catch(e){ /* non-critical, don't block sharing */ }
+}
+
 function copyQuoteText(){
   const item = state._quoteItem;
   if(!item) return;
   const sym = curSym(item.currency||'EUR');
   const final = state._qqFinal || 0;
   const text = buildQuoteText(item, final, sym);
-  navigator.clipboard?.writeText(text).then(()=>notify('Copied!','success')).catch(()=>notify('Copy failed','error'));
+  navigator.clipboard?.writeText(text).then(()=>{
+    notify('Copied!','success');
+    logQuoteHistory(item, final, state._qqQty, state._qqGrandTotal);
+  }).catch(()=>notify('Copy failed','error'));
 }
 
 async function shareQuoteWhatsApp(){
@@ -2005,6 +2180,7 @@ async function shareQuoteWhatsApp(){
   const sym = curSym(item.currency||'EUR');
   const final = state._qqFinal || 0;
   const text = buildQuoteText(item, final, sym);
+  logQuoteHistory(item, final, state._qqQty, state._qqGrandTotal);
   // Try native share with photo first (ecommerce-style)
   if(item.photo && navigator.canShare){
     try{
@@ -2022,6 +2198,8 @@ async function shareQuoteWhatsApp(){
 function buildQuoteText(item, price, sym){
   const specsText = Object.entries(item.specs||{}).map(([k,v])=>`  • ${k}: ${v}`).join('\n');
   const c = state.settings?.company||{};
+  const qty = state._qqQty || 1;
+  const grandTotal = state._qqGrandTotal || price;
   return [
     `*QUOTATION — ${item.type||item.item}*`,
     ``,
@@ -2032,6 +2210,8 @@ function buildQuoteText(item, price, sym){
     specsText ? `\n*Specs:*\n${specsText}` : '',
     ``,
     `💰 *Unit Price: ${sym}${price.toFixed(4)}*`,
+    qty > 1 ? `📊 *Quantity:* ${qty} pcs` : '',
+    qty > 1 ? `💵 *Total: ${sym}${grandTotal.toFixed(2)}*` : '',
     ``,
     c.name ? `_${c.name}${c.email?' · '+c.email:''}_` : '',
     `_Valid for 7 days · Subject to availability_`,
@@ -2043,6 +2223,8 @@ function generateQuotePdf(){
   if(!item) return;
   const margin = state._qqMargin||0;
   const freightKg = state._qqFreight||0;
+  const final = state._qqFinal || 0;
+  logQuoteHistory(item, final, state._qqQty, state._qqGrandTotal);
   closeQuoteSheet();
   notify('Generating quote PDF…');
   setTimeout(()=>{
