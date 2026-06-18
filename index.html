@@ -437,8 +437,8 @@ body{font-family:var(--font);color:var(--text);font-size:14px;font-weight:400;-w
 <div class="pp-modal-backdrop" id="pp-modal-backdrop">
   <div class="pp-modal">
     <div style="font-size:32px;margin-bottom:10px">🔐</div>
-    <div class="pp-modal-title">PP Access</div>
-    <div class="pp-modal-sub">Enter your purchase price PIN to view cost data</div>
+    <div class="pp-modal-title">Show Prices</div>
+    <div class="pp-modal-sub">Enter PIN to view pricing</div>
     <input type="password" class="pp-pin-input" id="pp-pin-input" placeholder="••••" maxlength="8" inputmode="numeric" onkeydown="if(event.key==='Enter')checkPpPin()">
     <div class="pp-pin-err" id="pp-pin-err"></div>
     <div class="pp-pin-actions">
@@ -578,7 +578,7 @@ const CURRENCIES = ['EUR','USD','GBP','PLN','SEK','DKK','NOK','CHF','AUD','CAD']
 const CUR_SYM = {EUR:'€',USD:'$',GBP:'£',PLN:'zł',SEK:'kr',DKK:'kr',NOK:'kr',CHF:'CHF',AUD:'A$',CAD:'C$'};
 
 let state = {
-  items: [], settings: {}, isViewer: false, isPpUnlocked: false,
+  items: [], settings: {}, isViewer: false,
   showPrices: false,
   searchQ: '', filters: {},
   selected: new Set(),
@@ -1159,7 +1159,6 @@ ${galleryHTML}
   </div>
   <div class="action-btns" style="margin-top:8px">
     <button class="action-btn secondary" onclick="shareCurrentProduct()">↑ Share</button>
-    ${!state.isViewer ? `<button class="action-btn secondary" onclick="togglePpView(${item.id})" id="pp-btn-${item.id}" style="background:var(--amber-bg);color:var(--amber);border:1px solid #fcd34d">🔐 View PP</button>` : ''}
   </div>
 </div>`;
 }
@@ -1836,7 +1835,6 @@ function togglePriceMode(){
   if(state.showPrices){
     // turning OFF doesn't need a PIN
     state.showPrices = false;
-    state.isPpUnlocked = false;
     clearTimeout(_priceTimeoutTimer);
     updatePriceToggleBtn();
     render();
@@ -1847,7 +1845,6 @@ function togglePriceMode(){
   $('pp-pin-input').value='';
   $('pp-pin-err').textContent='';
   setTimeout(()=>$('pp-pin-input')?.focus(),300);
-  state._pinPurpose = 'showPrices';
 }
 
 function updatePriceToggleBtn(){
@@ -1857,52 +1854,24 @@ function updatePriceToggleBtn(){
   btn.className = 'price-toggle-btn ' + (state.showPrices ? 'with-price' : 'without-price');
 }
 
-function togglePpView(itemId){
-  if(state.isPpUnlocked){
-    showPpInDetail(itemId);
-    return;
-  }
-  // Show PIN modal
-  $('pp-modal-backdrop').classList.add('open');
-  $('pp-pin-input').value='';
-  $('pp-pin-err').textContent='';
-  setTimeout(()=>$('pp-pin-input')?.focus(),300);
-  state._ppPendingItemId = itemId;
-  state._pinPurpose = 'pp';
-}
-
 function closePpModal(){
   $('pp-modal-backdrop').classList.remove('open');
-  state._ppPendingItemId = null;
-  state._pinPurpose = null;
 }
+
+// PRICE_TOGGLE_PIN: change this value directly to set your own PIN. No Firebase needed.
+const PRICE_TOGGLE_PIN = '1234';
 
 function checkPpPin(){
   const entered = $('pp-pin-input').value;
   const errEl = $('pp-pin-err');
-  const purpose = state._pinPurpose || 'pp';
-  const correct = state.settings?.system?.ppPassword || '';
 
-  if(!correct){
-    errEl.textContent = 'No PIN set. Set ppPassword in Firebase under fob_manager/settings/system.';
-    return;
-  }
-
-  if(entered === correct){
-    if(purpose === 'showPrices'){
-      state.showPrices = true;
-      state.isPpUnlocked = true; // single unified PIN unlocks both
-      updatePriceToggleBtn();
-      closePpModal();
-      notify('Prices now visible 💰','success');
-      armPriceSessionTimeout();
-      render();
-    } else {
-      state.isPpUnlocked = true;
-      closePpModal();
-      notify('PP access unlocked 🔓','success');
-      if(state._ppPendingItemId) showPpInDetail(state._ppPendingItemId);
-    }
+  if(entered === PRICE_TOGGLE_PIN){
+    state.showPrices = true;
+    updatePriceToggleBtn();
+    closePpModal();
+    notify('Prices now visible 💰','success');
+    armPriceSessionTimeout();
+    render();
   } else {
     errEl.textContent = 'Incorrect PIN. Try again.';
     $('pp-pin-input').value='';
@@ -1918,7 +1887,6 @@ function armPriceSessionTimeout(){
   _priceTimeoutTimer = setTimeout(()=>{
     if(state.showPrices){
       state.showPrices = false;
-      state.isPpUnlocked = false;
       updatePriceToggleBtn();
       notify('Prices auto-hidden after 10 min idle 🔒','info');
       render();
@@ -1936,35 +1904,9 @@ function resetPriceSessionTimeout(){
 document.addEventListener('visibilitychange', ()=>{
   if(document.hidden && state.showPrices){
     state.showPrices = false;
-    state.isPpUnlocked = false;
     updatePriceToggleBtn();
   }
 });
-
-function showPpInDetail(itemId){
-  const item = state.items.find(r=>r.id===itemId);
-  if(!item) return;
-  const ppEl = document.getElementById('pp-reveal-'+itemId);
-  if(ppEl){ ppEl.remove(); return; } // toggle off
-  const btn = document.getElementById('pp-btn-'+itemId);
-  if(!btn) return;
-  const c = state.settings?.company||{};
-  const sym = curSym(item.currency||'EUR');
-  const ppFob = calcFOB(item.pp,item.marg,item.fob,item.exrate);
-  const reveal = document.createElement('div');
-  reveal.id = 'pp-reveal-'+itemId;
-  reveal.style.cssText = 'background:var(--amber-bg);border:1px solid #fcd34d;border-radius:10px;padding:12px;margin:4px 0 8px;font-size:12px';
-  reveal.innerHTML = `
-    <div style="font-size:10px;font-weight:700;color:var(--amber);text-transform:uppercase;margin-bottom:8px">🔐 Purchase Price (Confidential)</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
-      <div><div style="font-size:10px;color:var(--text3)">PP (INR)</div><div style="font-weight:700;font-family:var(--mono)">₹${(item.pp||0).toFixed(2)}</div></div>
-      <div><div style="font-size:10px;color:var(--text3)">FOB Margin</div><div style="font-weight:700;font-family:var(--mono)">${(item.marg||0)}% + ${(item.fob||0)}%</div></div>
-      <div><div style="font-size:10px;color:var(--text3)">Exchange Rate</div><div style="font-weight:700;font-family:var(--mono)">₹${(item.exrate||0)} / ${item.currency||'EUR'}</div></div>
-      <div><div style="font-size:10px;color:var(--text3)">FOB ${item.currency||'EUR'}</div><div style="font-weight:700;font-family:var(--mono);color:var(--green)">${sym}${ppFob.toFixed(4)}</div></div>
-    </div>`;
-  btn.parentNode.insertBefore(reveal, btn);
-  btn.textContent = '🔒 Hide PP';
-}
 
 // ── QUICK QUOTE SHEET (new feature) ───────────────────────────────────────────
 function openQuoteSheet(itemId){
